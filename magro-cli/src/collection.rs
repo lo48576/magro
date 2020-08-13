@@ -26,9 +26,16 @@ impl CollectionOpt {
                 log::trace!("collection add name={:?} path={:?}", name, path);
                 add_collection(context, name, path)
             }
-            Subcommand::Del { name } => {
-                log::trace!("collection del name={:?}", name);
-                unregister_collection(context, name)
+            Subcommand::Del {
+                name,
+                allow_remove_nothing,
+            } => {
+                log::trace!(
+                    "collection del name={:?}, allow_remove_nothing={}",
+                    name,
+                    allow_remove_nothing
+                );
+                unregister_collection(context, name, *allow_remove_nothing)
             }
         }
     }
@@ -56,6 +63,9 @@ pub enum Subcommand {
         /// Collection name.
         // Use permissive types. Any invalid collection names won't break consistency of the config.
         name: String,
+        /// Do not emit an error if the collection does not exist.
+        #[structopt(long = "allow-remove-nothing")]
+        allow_remove_nothing: bool,
     },
 }
 
@@ -83,14 +93,21 @@ fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyh
 
 /// Unregister the collection.
 ///
-/// This operation is idempotent.
-fn unregister_collection(context: &Context, name: &str) -> anyhow::Result<()> {
+/// This operation is idempotent when `allow_remove_nothing` is `true`.
+fn unregister_collection(
+    context: &Context,
+    name: &str,
+    allow_remove_nothing: bool,
+) -> anyhow::Result<()> {
     // Create a new modified config.
     let mut newconf = context.config().clone();
     let is_removed = newconf.collections_mut().remove(name).is_some();
     if !is_removed {
-        // This is not critical. Just warn.
-        log::warn!("Collection named {:?} does not exist", name);
+        if allow_remove_nothing {
+            log::debug!("Collection named {:?} does not exist", name);
+        } else {
+            bail!("Collection named {:?} does not exist", name);
+        }
     }
 
     // Save the config.
@@ -100,7 +117,9 @@ fn unregister_collection(context: &Context, name: &str) -> anyhow::Result<()> {
             context.config_path().display()
         )
     })?;
-    log::info!("Unregistered the collection {:?}", name);
+    if is_removed {
+        log::info!("Unregistered the collection {:?}", name);
+    }
 
     Ok(())
 }
