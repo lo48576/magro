@@ -37,6 +37,13 @@ pub struct Collection {
 }
 
 impl Collection {
+    /// Creates a new collection.
+    #[inline]
+    #[must_use]
+    pub fn new(name: CollectionName, path: PathBuf) -> Self {
+        Self { name, path }
+    }
+
     /// Returns the collection name.
     #[inline]
     #[must_use]

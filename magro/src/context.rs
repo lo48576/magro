@@ -93,6 +93,13 @@ impl Context {
     pub fn config_path(&self) -> &Path {
         &self.config_path
     }
+
+    /// Returns the config.
+    #[inline]
+    #[must_use]
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
 }
 
 /// Saves a config to the given path.
