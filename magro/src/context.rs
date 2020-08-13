@@ -79,6 +79,13 @@ impl Context {
             config,
         })
     }
+
+    /// Returns the home directory.
+    #[inline]
+    #[must_use]
+    pub(crate) fn home_dir(&self) -> &Path {
+        self.user_dirs.home_dir()
+    }
 }
 
 /// Saves a config to the given path.
