@@ -4,8 +4,12 @@
 //! Operations on repositories and policies for them can be applied separately
 //! for each collection.
 
-pub use self::name::{CollectionName, CollectionNameError};
+pub use self::{
+    collections::Collections,
+    name::{CollectionName, CollectionNameError},
+};
 
+pub mod collections;
 mod name;
 
 /// Repositories collection.
