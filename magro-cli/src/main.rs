@@ -1,7 +1,12 @@
 //! Command to manage git repositories.
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     init_logger();
+
+    let ctx = magro::Context::new()?;
+    let _ = ctx;
+
+    Ok(())
 }
 
 /// Initialize logger.
