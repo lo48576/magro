@@ -1,11 +1,19 @@
 //! Command to manage git repositories.
 
+use structopt::StructOpt;
+
+use self::cli_opt::Opt;
+
+mod cli_opt;
+pub(crate) mod collection;
+
 fn main() -> anyhow::Result<()> {
     init_logger();
 
     magro::context::create_default_config_file_if_missing()?;
     let ctx = magro::Context::new(None)?;
-    let _ = ctx;
+    let opt = Opt::from_args();
+    opt.run(&ctx)?;
 
     Ok(())
 }

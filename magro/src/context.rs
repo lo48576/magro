@@ -100,6 +100,12 @@ impl Context {
     pub fn config(&self) -> &Config {
         &self.config
     }
+
+    /// Saves the given config.
+    #[inline]
+    pub fn save_config(&self, config: &Config) -> io::Result<()> {
+        save_config(&self.config_path, config)
+    }
 }
 
 /// Saves a config to the given path.
