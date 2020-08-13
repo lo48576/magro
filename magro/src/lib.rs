@@ -4,7 +4,8 @@
 #![warn(rust_2018_idioms)]
 #![warn(clippy::missing_docs_in_private_items)]
 
-pub use context::Context;
+pub use self::{config::Config, context::Context};
 
 pub mod collection;
+pub mod config;
 pub mod context;

@@ -21,6 +21,7 @@ directories = "3"
 log = "0.4"
 serde = { version = "1.0.115", features = ["derive"] }
 thiserror = "1.0.20"
+toml = "0.5.6"
 
 [dev-dependencies]
 serde_test = "1.0.115"
