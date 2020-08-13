@@ -19,7 +19,11 @@ all-features = true
 anyhow = "1.0.32"
 directories = "3"
 log = "0.4"
+serde = { version = "1.0.115", features = ["derive"] }
 thiserror = "1.0.20"
+
+[dev-dependencies]
+serde_test = "1.0.115"
 
 [badges]
 maintenance = { status = "experimental" }

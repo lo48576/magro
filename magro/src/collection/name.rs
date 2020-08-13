@@ -2,6 +2,7 @@
 
 use std::{borrow, convert::TryFrom, fmt, str};
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 
 /// Collection name error.
@@ -52,7 +53,9 @@ impl CollectionNameError {
 /// // U+03B1: Greek Small Letter Alpha.
 /// assert!(CollectionName::try_from("\u{03B1}").is_err());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String")]
+#[serde(into = "String")]
 pub struct CollectionName(String);
 
 impl CollectionName {
@@ -156,5 +159,31 @@ impl From<CollectionName> for String {
     #[inline]
     fn from(s: CollectionName) -> Self {
         s.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use serde_test::{assert_de_tokens_error, assert_tokens, Token};
+
+    #[test]
+    fn serde() {
+        let name = CollectionName::try_from("hello").unwrap();
+
+        assert_tokens(&name, &[Token::String("hello")]);
+    }
+
+    #[test]
+    fn serde_invalid_name() {
+        let invalid = "-hello";
+        let expected_error = CollectionNameError {
+            message: "Collection name starts with '-'".to_owned(),
+        };
+        assert_de_tokens_error::<CollectionName>(
+            &[Token::String(invalid)],
+            &expected_error.to_string(),
+        );
     }
 }

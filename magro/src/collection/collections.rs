@@ -1,10 +1,13 @@
 //! Set of collections.
 
-use std::{collections::BTreeMap, iter};
+use std::{collections::BTreeMap, fmt, iter};
+
+use serde::{Deserialize, Serialize};
 
 use crate::collection::Collection;
 
 /// Set of collections.
+// Note that this is serialized / deserialized as an array, rather than a map.
 #[derive(Default, Debug, Clone)]
 pub struct Collections {
     /// Collections.
@@ -52,6 +55,64 @@ impl<'a> IntoIterator for &'a Collections {
         Iter {
             inner: self.collections.values(),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for Collections {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        /// Visitor type for `Collections`.
+        #[derive(Default)]
+        struct CollectionsVisitor(BTreeMap<String, Collection>);
+
+        impl<'de> serde::de::Visitor<'de> for CollectionsVisitor {
+            type Value = Collections;
+
+            #[inline]
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("array of collections")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                use serde::de;
+
+                let mut map = BTreeMap::new();
+                while let Some(collection) = seq.next_element::<Collection>()? {
+                    let name = collection.name().as_str().to_owned();
+                    let dup = map.insert(name, collection);
+                    if let Some(dup) = dup {
+                        return Err(de::Error::custom(format!(
+                            "collections with duplicate name {:?}",
+                            dup.name.as_str()
+                        )));
+                    }
+                }
+
+                Ok(Collections { collections: map })
+            }
+        }
+
+        deserializer.deserialize_seq(CollectionsVisitor::default())
+    }
+}
+
+impl Serialize for Collections {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeSeq;
+
+        let mut seq = serializer.serialize_seq(Some(self.collections.len()))?;
+        for collection in self.collections.values() {
+            seq.serialize_element(collection)?;
+        }
+        seq.end()
     }
 }
 
