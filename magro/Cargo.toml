@@ -16,6 +16,7 @@ publish = false
 all-features = true
 
 [dependencies]
+thiserror = "1.0.20"
 
 [badges]
 maintenance = { status = "experimental" }
