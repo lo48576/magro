@@ -16,6 +16,9 @@ publish = false
 all-features = true
 
 [dependencies]
+anyhow = "1.0.32"
+directories = "3"
+log = "0.4"
 thiserror = "1.0.20"
 
 [badges]
