@@ -1,0 +1,29 @@
+[package]
+name = "magro-cli"
+version = "0.0.0"
+authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = "CLI utility to MAnage Git RepOsitories"
+repository = "https://gitlab.com/lo48576/magro"
+keywords = ["git"]
+publish = false
+default-run = "magro"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+
+[badges]
+maintenance = { status = "experimental" }
+gitlab = { repository = "lo48576/magro", branch = "master" }
+
+[[bin]]
+# I don't want the default binary to be named `magro-cli`.
+# `-cli` suffix is redundant for users of the command.
+name = "magro"
+path = "src/main.rs"
