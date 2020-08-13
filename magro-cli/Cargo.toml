@@ -17,6 +17,8 @@ default-run = "magro"
 all-features = true
 
 [dependencies]
+env_logger = "0.7"
+log = "0.4"
 
 [badges]
 maintenance = { status = "experimental" }
