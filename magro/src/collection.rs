@@ -7,3 +7,19 @@
 pub use self::name::{CollectionName, CollectionNameError};
 
 mod name;
+
+/// Repositories collection.
+#[derive(Debug, Clone)]
+pub struct Collection {
+    /// Collection name.
+    name: CollectionName,
+}
+
+impl Collection {
+    /// Returns the collection name.
+    #[inline]
+    #[must_use]
+    pub fn name(&self) -> &CollectionName {
+        &self.name
+    }
+}
