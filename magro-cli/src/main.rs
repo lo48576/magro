@@ -3,7 +3,7 @@
 fn main() -> anyhow::Result<()> {
     init_logger();
 
-    let ctx = magro::Context::new()?;
+    let ctx = magro::Context::new(None)?;
     let _ = ctx;
 
     Ok(())
