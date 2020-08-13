@@ -31,6 +31,12 @@ impl Collections {
         self.collections.insert(name, collection)
     }
 
+    /// Removes a collection with the given name and returns it, if exists.
+    #[inline]
+    pub fn remove(&mut self, name: &str) -> Option<Collection> {
+        self.collections.remove(name)
+    }
+
     /// Returns the number of the collections.
     #[inline]
     #[must_use]
