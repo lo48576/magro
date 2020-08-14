@@ -59,6 +59,10 @@ impl CollectionOpt {
                     show_collections(context, &mut targets, *verbose)
                 }
             }
+            Subcommand::SetPath { name, path } => {
+                log::trace!("collection set-path name={:?}, path={:?}", name, path);
+                set_path(context, name, path)
+            }
         }
     }
 }
@@ -98,6 +102,17 @@ pub enum Subcommand {
         /// Shows verbose information.
         #[structopt(long = "verbose", short = "v")]
         verbose: bool,
+    },
+    /// Sets the path to the collection directory.
+    SetPath {
+        /// Collection name.
+        name: CollectionName,
+        /// Path to the collection directory.
+        ///
+        /// If the path is relative, it is resolved using home directory as the base.
+        /// If the path is absolute, it is used as is.
+        #[structopt(parse(from_os_str))]
+        path: PathBuf,
     },
 }
 
@@ -187,6 +202,28 @@ fn show_collections(
             writeln!(handle, "{}", collection.name().as_str())?;
         }
     }
+
+    Ok(())
+}
+
+/// Sets the path to the collection directory.
+fn set_path(context: &Context, name: &CollectionName, path: &Path) -> anyhow::Result<()> {
+    // Create a new modified config.
+    let mut newconf = context.config().clone();
+    newconf
+        .collections_mut()
+        .get_mut(name.as_str())
+        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name.as_str()))?
+        .set_path(path);
+
+    // Save the config.
+    context.save_config(&newconf).with_context(|| {
+        anyhow!(
+            "Failed to save config file {}",
+            context.config_path().display()
+        )
+    })?;
+    log::debug!("Set the path of the collection {:?} to {:?}", name, path);
 
     Ok(())
 }
