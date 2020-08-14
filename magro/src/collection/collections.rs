@@ -108,7 +108,7 @@ impl<'de> Deserialize<'de> for Collections {
                     if let Some(dup) = dup {
                         return Err(de::Error::custom(format!(
                             "collections with duplicate name {:?}",
-                            dup.name.as_str()
+                            dup.name
                         )));
                     }
                 }

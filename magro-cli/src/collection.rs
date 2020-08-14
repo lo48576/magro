@@ -53,9 +53,7 @@ impl CollectionOpt {
                 if names.is_empty() {
                     show_collections(context, &mut collections.iter().map(Ok), *verbose)
                 } else {
-                    let mut targets = names
-                        .iter()
-                        .map(|name| collections.get(name.as_str()).ok_or(name));
+                    let mut targets = names.iter().map(|name| collections.get(name).ok_or(name));
                     show_collections(context, &mut targets, *verbose)
                 }
             }
@@ -148,7 +146,7 @@ fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyh
     let collection = Collection::new(name.clone(), path.to_owned());
     let has_conflict = newconf.collections_mut().insert(collection).is_some();
     if has_conflict {
-        bail!("Collection `{}` already exists", name.as_str());
+        bail!("Collection `{}` already exists", name);
     }
 
     // Save the config.
@@ -158,7 +156,7 @@ fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyh
             context.config_path().display()
         )
     })?;
-    log::debug!("Added the collection `{}`", name.as_str());
+    log::debug!("Added the collection `{}`", name);
 
     Ok(())
 }
@@ -208,10 +206,9 @@ fn show_collections(
 
     if verbose {
         for collection in collections {
-            let collection =
-                collection.map_err(|name| anyhow!("No such collection `{}`", name.as_str()))?;
+            let collection = collection.map_err(|name| anyhow!("No such collection `{}`", name))?;
 
-            writeln!(handle, "collection: {}", collection.name().as_str())?;
+            writeln!(handle, "collection: {}", collection.name())?;
             writeln!(
                 handle,
                 "    path: {}",
@@ -220,10 +217,10 @@ fn show_collections(
         }
     } else {
         for collection in collections {
-            let collection = collection
-                .map_err(|name| anyhow!("Collection named `{}` does not exist", name.as_str()))?;
+            let collection =
+                collection.map_err(|name| anyhow!("Collection named `{}` does not exist", name))?;
 
-            writeln!(handle, "{}", collection.name().as_str())?;
+            writeln!(handle, "{}", collection.name())?;
         }
     }
 
@@ -240,12 +237,12 @@ fn rename_collection(
     let mut newconf = context.config().clone();
     let mut collection = newconf
         .collections_mut()
-        .remove(old_name.as_str())
-        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", old_name.as_str()))?;
+        .remove(old_name)
+        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", old_name))?;
     collection.set_name(new_name.clone());
     let has_conflict = newconf.collections_mut().insert(collection).is_some();
     if has_conflict {
-        bail!("Collection `{}` already exists", new_name.as_str());
+        bail!("Collection `{}` already exists", new_name);
     }
 
     // Save the config.
@@ -255,11 +252,7 @@ fn rename_collection(
             context.config_path().display()
         )
     })?;
-    log::debug!(
-        "Renamed the collection `{}` to `{}`",
-        old_name.as_str(),
-        new_name.as_str()
-    );
+    log::debug!("Renamed the collection `{}` to `{}`", old_name, new_name);
 
     Ok(())
 }
@@ -269,8 +262,8 @@ fn get_path(context: &Context, name: &CollectionName) -> anyhow::Result<()> {
     let path = context
         .config()
         .collections()
-        .get(name.as_str())
-        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name.as_str()))?
+        .get(name)
+        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name))?
         .abspath(context);
     writeln!(io::stdout(), "{}", path.display())?;
 
@@ -283,8 +276,8 @@ fn set_path(context: &Context, name: &CollectionName, path: &Path) -> anyhow::Re
     let mut newconf = context.config().clone();
     newconf
         .collections_mut()
-        .get_mut(name.as_str())
-        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name.as_str()))?
+        .get_mut(name)
+        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name))?
         .set_path(path);
 
     // Save the config.
