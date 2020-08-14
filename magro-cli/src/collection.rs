@@ -59,6 +59,14 @@ impl CollectionOpt {
                     show_collections(context, &mut targets, *verbose)
                 }
             }
+            Subcommand::Rename { old_name, new_name } => {
+                log::trace!(
+                    "collection rename old_name={:?}, new_name={:?}",
+                    old_name,
+                    new_name
+                );
+                rename_collection(context, old_name, new_name)
+            }
             Subcommand::GetPath { name } => {
                 log::trace!("collection get-path name={:?}", name);
                 get_path(context, name)
@@ -106,6 +114,13 @@ pub enum Subcommand {
         /// Shows verbose information.
         #[structopt(long = "verbose", short = "v")]
         verbose: bool,
+    },
+    /// Renames the collection.
+    Rename {
+        /// Old name.
+        old_name: CollectionName,
+        /// New name.
+        new_name: CollectionName,
     },
     /// Shows the path to the collection directory.
     GetPath {
@@ -211,6 +226,40 @@ fn show_collections(
             writeln!(handle, "{}", collection.name().as_str())?;
         }
     }
+
+    Ok(())
+}
+
+/// Renames the collection.
+fn rename_collection(
+    context: &Context,
+    old_name: &CollectionName,
+    new_name: &CollectionName,
+) -> anyhow::Result<()> {
+    // Create a new modified config.
+    let mut newconf = context.config().clone();
+    let mut collection = newconf
+        .collections_mut()
+        .remove(old_name.as_str())
+        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", old_name.as_str()))?;
+    collection.set_name(new_name.clone());
+    let has_conflict = newconf.collections_mut().insert(collection).is_some();
+    if has_conflict {
+        bail!("Collection `{}` already exists", new_name.as_str());
+    }
+
+    // Save the config.
+    context.save_config(&newconf).with_context(|| {
+        anyhow!(
+            "Failed to save config file {}",
+            context.config_path().display()
+        )
+    })?;
+    log::debug!(
+        "Renamed the collection `{}` to `{}`",
+        old_name.as_str(),
+        new_name.as_str()
+    );
 
     Ok(())
 }
