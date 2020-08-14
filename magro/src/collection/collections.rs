@@ -24,11 +24,24 @@ impl Collections {
         self.collections.get(name)
     }
 
+    /// Returns the mutable reference to the collection with the given name, if available.
+    #[inline]
+    #[must_use]
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut Collection> {
+        self.collections.get_mut(name)
+    }
+
     /// Adds the given collection to this `Collections`, and returns the old entry if exists.
     #[inline]
     pub fn insert(&mut self, collection: Collection) -> Option<Collection> {
         let name = collection.name().as_str().to_owned();
         self.collections.insert(name, collection)
+    }
+
+    /// Removes a collection with the given name and returns it, if exists.
+    #[inline]
+    pub fn remove(&mut self, name: &str) -> Option<Collection> {
+        self.collections.remove(name)
     }
 
     /// Returns the number of the collections.
@@ -43,6 +56,13 @@ impl Collections {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.collections.is_empty()
+    }
+
+    /// Returns an iterator of the collections.
+    #[inline]
+    #[must_use]
+    pub fn iter(&self) -> Iter<'_> {
+        self.into_iter()
     }
 }
 

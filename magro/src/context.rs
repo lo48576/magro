@@ -1,7 +1,6 @@
 //! Magro context.
 
 use std::{
-    borrow::Cow,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -45,6 +44,8 @@ pub struct Context {
     user_dirs: UserDirs,
     /// Project directories.
     project_dirs: ProjectDirs,
+    /// Config file path.
+    config_path: PathBuf,
     /// Config.
     config: Config,
 }
@@ -61,10 +62,8 @@ impl Context {
         log::debug!("Config directory: {:?}", project_dirs.config_dir());
 
         let conf_dir = project_dirs.config_dir();
-        let config_path = config_path.map_or_else(
-            || Cow::Owned(conf_dir.join(DEFAULT_CONFIG_RELPATH)),
-            Cow::Borrowed,
-        );
+        let config_path =
+            config_path.map_or_else(|| conf_dir.join(DEFAULT_CONFIG_RELPATH), ToOwned::to_owned);
         let config = Config::from_path(&config_path)
             .with_context(|| anyhow!("Failed to load the config file {}", config_path.display()))
             .map_err(Error::new)?;
@@ -75,6 +74,7 @@ impl Context {
 
         Ok(Self {
             user_dirs,
+            config_path,
             project_dirs,
             config,
         })
@@ -85,6 +85,26 @@ impl Context {
     #[must_use]
     pub(crate) fn home_dir(&self) -> &Path {
         self.user_dirs.home_dir()
+    }
+
+    /// Returns the currently used config path.
+    #[inline]
+    #[must_use]
+    pub fn config_path(&self) -> &Path {
+        &self.config_path
+    }
+
+    /// Returns the config.
+    #[inline]
+    #[must_use]
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    /// Saves the given config.
+    #[inline]
+    pub fn save_config(&self, config: &Config) -> io::Result<()> {
+        save_config(&self.config_path, config)
     }
 }
 

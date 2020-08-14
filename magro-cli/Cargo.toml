@@ -21,6 +21,7 @@ anyhow = "1.0.32"
 env_logger = "0.7"
 log = "0.4"
 magro = { path = "../magro" }
+structopt = "0.3.16"
 
 [badges]
 maintenance = { status = "experimental" }

@@ -35,4 +35,18 @@ impl Config {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
         load::from_path(path.as_ref())
     }
+
+    /// Returns a reference to the collections.
+    #[inline]
+    #[must_use]
+    pub fn collections(&self) -> &Collections {
+        &self.collections
+    }
+
+    /// Returns a mutable reference to the collections.
+    #[inline]
+    #[must_use]
+    pub fn collections_mut(&mut self) -> &mut Collections {
+        &mut self.collections
+    }
 }

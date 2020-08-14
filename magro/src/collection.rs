@@ -37,11 +37,24 @@ pub struct Collection {
 }
 
 impl Collection {
+    /// Creates a new collection.
+    #[inline]
+    #[must_use]
+    pub fn new(name: CollectionName, path: PathBuf) -> Self {
+        Self { name, path }
+    }
+
     /// Returns the collection name.
     #[inline]
     #[must_use]
     pub fn name(&self) -> &CollectionName {
         &self.name
+    }
+
+    /// Sets the collection name.
+    #[inline]
+    pub fn set_name(&mut self, name: CollectionName) {
+        self.name = name;
     }
 
     /// Returns the absolute path of the collection.
@@ -53,5 +66,11 @@ impl Collection {
         }
         let base = context.home_dir();
         Cow::Owned(base.join(&self.path))
+    }
+
+    /// Sets the given path to the collection.
+    #[inline]
+    pub fn set_path(&mut self, path: impl Into<PathBuf>) {
+        self.path = path.into();
     }
 }
