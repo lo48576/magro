@@ -50,6 +50,13 @@ impl Collections {
     pub fn is_empty(&self) -> bool {
         self.collections.is_empty()
     }
+
+    /// Returns an iterator of the collections.
+    #[inline]
+    #[must_use]
+    pub fn iter(&self) -> Iter<'_> {
+        self.into_iter()
+    }
 }
 
 impl<'a> IntoIterator for &'a Collections {
