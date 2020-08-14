@@ -1,6 +1,6 @@
 //! Collection name.
 
-use std::{borrow, convert::TryFrom, fmt, str};
+use std::{borrow, convert::TryFrom, fmt, ops, str};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
@@ -53,7 +53,7 @@ impl CollectionNameError {
 /// // U+03B1: Greek Small Letter Alpha.
 /// assert!(CollectionName::try_from("\u{03B1}").is_err());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
 pub struct CollectionName(String);
@@ -118,6 +118,29 @@ impl AsRef<str> for CollectionName {
 impl borrow::Borrow<str> for CollectionName {
     #[inline]
     fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for CollectionName {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl fmt::Display for CollectionName {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl ops::Deref for CollectionName {
+    type Target = str;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
