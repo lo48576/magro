@@ -30,15 +30,15 @@ impl CollectionOpt {
                 add_collection(context, name, path)
             }
             Subcommand::Del {
-                name,
+                names,
                 allow_remove_nothing,
             } => {
                 log::trace!(
                     "collection del name={:?}, allow_remove_nothing={}",
-                    name,
+                    names,
                     allow_remove_nothing
                 );
-                unregister_collection(context, name, *allow_remove_nothing)
+                unregister_collection(context, names, *allow_remove_nothing)
             }
             Subcommand::Show {
                 collections: names,
@@ -98,9 +98,10 @@ pub enum Subcommand {
     ///
     /// This just make magro forget about the collection, and never removes files from storage.
     Del {
-        /// Collection name.
+        /// Collection names.
         // Use permissive types. Any invalid collection names won't break consistency of the config.
-        name: String,
+        #[structopt(required = true, min_values = 1)]
+        names: Vec<String>,
         /// Do not emit an error if the collection does not exist.
         #[structopt(long = "allow-remove-nothing")]
         allow_remove_nothing: bool,
@@ -167,17 +168,19 @@ fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyh
 /// This operation is idempotent when `allow_remove_nothing` is `true`.
 fn unregister_collection(
     context: &Context,
-    name: &str,
+    names: &[String],
     allow_remove_nothing: bool,
 ) -> anyhow::Result<()> {
     // Create a new modified config.
     let mut newconf = context.config().clone();
-    let is_removed = newconf.collections_mut().remove(name).is_some();
-    if !is_removed {
-        if allow_remove_nothing {
-            log::debug!("Collection named {:?} does not exist", name);
-        } else {
-            bail!("Collection named {:?} does not exist", name);
+    for name in names {
+        let is_removed = newconf.collections_mut().remove(name).is_some();
+        if !is_removed {
+            if allow_remove_nothing {
+                log::debug!("Collection named {:?} does not exist", name);
+            } else {
+                bail!("Collection named {:?} does not exist", name);
+            }
         }
     }
 
@@ -188,9 +191,6 @@ fn unregister_collection(
             context.config_path().display()
         )
     })?;
-    if is_removed {
-        log::info!("Unregistered the collection {:?}", name);
-    }
 
     Ok(())
 }
