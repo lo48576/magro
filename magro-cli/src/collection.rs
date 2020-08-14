@@ -59,6 +59,10 @@ impl CollectionOpt {
                     show_collections(context, &mut targets, *verbose)
                 }
             }
+            Subcommand::GetPath { name } => {
+                log::trace!("collection get-path name={:?}", name);
+                get_path(context, name)
+            }
             Subcommand::SetPath { name, path } => {
                 log::trace!("collection set-path name={:?}, path={:?}", name, path);
                 set_path(context, name, path)
@@ -102,6 +106,11 @@ pub enum Subcommand {
         /// Shows verbose information.
         #[structopt(long = "verbose", short = "v")]
         verbose: bool,
+    },
+    /// Shows the path to the collection directory.
+    GetPath {
+        /// Collection name.
+        name: CollectionName,
     },
     /// Sets the path to the collection directory.
     SetPath {
@@ -202,6 +211,19 @@ fn show_collections(
             writeln!(handle, "{}", collection.name().as_str())?;
         }
     }
+
+    Ok(())
+}
+
+/// Shows the path to the collection directory.
+fn get_path(context: &Context, name: &CollectionName) -> anyhow::Result<()> {
+    let path = context
+        .config()
+        .collections()
+        .get(name.as_str())
+        .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name.as_str()))?
+        .abspath(context);
+    writeln!(io::stdout(), "{}", path.display())?;
 
     Ok(())
 }
