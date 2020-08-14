@@ -1,6 +1,9 @@
 //! `collection` subcommand.
 
-use std::path::{Path, PathBuf};
+use std::{
+    io::{self, Write},
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, bail, Context as _};
 use magro::{
@@ -37,6 +40,25 @@ impl CollectionOpt {
                 );
                 unregister_collection(context, name, *allow_remove_nothing)
             }
+            Subcommand::Show {
+                collections: names,
+                verbose,
+            } => {
+                log::trace!(
+                    "collection show collections={:?}, verbose={}",
+                    names,
+                    verbose
+                );
+                let collections = context.config().collections();
+                if names.is_empty() {
+                    show_collections(context, &mut collections.iter().map(Ok), *verbose)
+                } else {
+                    let mut targets = names
+                        .iter()
+                        .map(|name| collections.get(name.as_str()).ok_or(name));
+                    show_collections(context, &mut targets, *verbose)
+                }
+            }
         }
     }
 }
@@ -66,6 +88,16 @@ pub enum Subcommand {
         /// Do not emit an error if the collection does not exist.
         #[structopt(long = "allow-remove-nothing")]
         allow_remove_nothing: bool,
+    },
+    /// Shows the collections.
+    Show {
+        /// Collection name.
+        ///
+        /// If not specified, it is treated as all collections are specified.
+        collections: Vec<CollectionName>,
+        /// Shows verbose information.
+        #[structopt(long = "verbose", short = "v")]
+        verbose: bool,
     },
 }
 
@@ -119,6 +151,41 @@ fn unregister_collection(
     })?;
     if is_removed {
         log::info!("Unregistered the collection {:?}", name);
+    }
+
+    Ok(())
+}
+
+/// Shows the collections.
+// Using `dyn Iterator` won't be problem, because the number of collections is
+// expected to be small (for usual usage).
+fn show_collections(
+    context: &Context,
+    collections: &mut dyn Iterator<Item = Result<&Collection, &CollectionName>>,
+    verbose: bool,
+) -> anyhow::Result<()> {
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+
+    if verbose {
+        for collection in collections {
+            let collection =
+                collection.map_err(|name| anyhow!("No such collection `{}`", name.as_str()))?;
+
+            writeln!(handle, "collection: {}", collection.name().as_str())?;
+            writeln!(
+                handle,
+                "    path: {}",
+                collection.abspath(context).display()
+            )?;
+        }
+    } else {
+        for collection in collections {
+            let collection = collection
+                .map_err(|name| anyhow!("Collection named `{}` does not exist", name.as_str()))?;
+
+            writeln!(handle, "{}", collection.name().as_str())?;
+        }
     }
 
     Ok(())
