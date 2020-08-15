@@ -9,7 +9,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{collection::CollectionName, repository::Vcs};
+use crate::{collection::CollectionName, discovery::RepoEntry, repository::Vcs};
 
 /// Global cache data.
 ///
@@ -168,5 +168,15 @@ impl RepoCacheEntry {
             vcs: self.vcs,
             path,
         })
+    }
+}
+
+impl From<RepoEntry> for RepoCacheEntry {
+    #[inline]
+    fn from(v: RepoEntry) -> Self {
+        let vcs = v.vcs();
+        let path = v.into_path();
+
+        Self { vcs, path }
     }
 }
