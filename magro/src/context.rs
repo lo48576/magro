@@ -119,7 +119,7 @@ fn save_config(path: &Path, conf: &Config) -> io::Result<()> {
         // This is expected to always success, because the config is valid and
         // the serialization does not perform I/O.
         conf.serialize(&mut ser)
-            .expect("Failed to serialize the default config");
+            .expect("Default config data should be serializable");
         content
     };
     fs::write(path, &content)
