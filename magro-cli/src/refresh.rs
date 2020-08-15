@@ -104,26 +104,15 @@ fn refresh_collections(
         };
         log::debug!("Refreshing collection `{}`", collection.name());
 
-        let repos = match discover_repositories(context, collection, verbose, keep_going) {
-            Ok(v) => v,
-            Err(e) => {
-                if !keep_going {
-                    return Err(e);
-                }
-                error_collections.push(collection.name());
-                log::error!(
-                    "Error happened during refreshing collection `{}`: {}",
-                    collection.name(),
-                    e
-                );
-                // The entire collection is unavailable.
-                Vec::new()
-            }
-        };
+        // `?` can be used here, because `generate_collection_repos_cache()`
+        // could return `Err(_)` only when `keep_going` is false.
+        let collection_cache: Option<_> =
+            generate_collection_repos_cache(context, collection, verbose, keep_going)?;
+        if collection_cache.is_none() {
+            error_collections.push(collection.name());
+        }
+        let collection_cache = collection_cache.unwrap_or_default();
 
-        // Create the new collection cache.
-        let mut collection_cache = CollectionReposCache::default();
-        collection_cache.extend(repos);
         cache.cache_collection_repos(collection.name().clone(), collection_cache);
     }
 
@@ -149,6 +138,45 @@ fn refresh_collections(
     }
 
     Ok(())
+}
+
+/// Generates a `CollectionReposCache` for the given collection.
+///
+/// This always returns `Ok(_)` when `keep_going` is `true`.
+/// `Ok(None)` will be returned when `keep_going` is `true` and failed to
+/// discover repositories.
+pub(crate) fn generate_collection_repos_cache(
+    context: &Context,
+    collection: &Collection,
+    verbose: bool,
+    keep_going: bool,
+) -> anyhow::Result<Option<CollectionReposCache>> {
+    log::debug!(
+        "Generating cache for the collection `{}`",
+        collection.name()
+    );
+
+    let repos = match discover_repositories(context, collection, verbose, keep_going) {
+        Ok(v) => v,
+        Err(e) => {
+            if !keep_going {
+                return Err(e);
+            }
+            log::error!(
+                "Error happened during refreshing collection `{}`: {}",
+                collection.name(),
+                e
+            );
+            // The entire collection is unavailable.
+            return Ok(None);
+        }
+    };
+
+    // Create the new collection cache.
+    let mut collection_cache = CollectionReposCache::default();
+    collection_cache.extend(repos);
+
+    Ok(Some(collection_cache))
 }
 
 /// Discovers the git directories.
