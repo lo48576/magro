@@ -12,6 +12,8 @@ use magro::{
 };
 use structopt::StructOpt;
 
+use crate::refresh::generate_collection_repos_cache;
+
 /// Options for `collection` subcommand.
 #[derive(Debug, Clone, StructOpt)]
 #[non_exhaustive]
@@ -25,9 +27,13 @@ impl CollectionOpt {
     /// Runs the actual operation.
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         match &self.subcommand {
-            Subcommand::Add { name, path } => {
+            Subcommand::Add {
+                name,
+                path,
+                refresh,
+            } => {
                 log::trace!("collection add name={:?} path={:?}", name, path);
-                add_collection(context, name, path)
+                add_collection(context, name, path, *refresh)
             }
             Subcommand::Del {
                 names,
@@ -91,6 +97,12 @@ pub enum Subcommand {
         /// If the path is absolute, it is used as is.
         #[structopt(parse(from_os_str))]
         path: PathBuf,
+        /// Runs refresh operation for the newly added collection.
+        ///
+        /// Specifying this option updates a cache for the collection in the
+        /// same way as `refresh --collections={new_collection} --keep-going`.
+        #[structopt(long)]
+        refresh: bool,
     },
     /// Unregisters a new collection.
     ///
@@ -140,7 +152,12 @@ pub enum Subcommand {
 }
 
 /// Adds the collection.
-fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyhow::Result<()> {
+fn add_collection(
+    context: &Context,
+    name: &CollectionName,
+    path: &Path,
+    refresh: bool,
+) -> anyhow::Result<()> {
     // Create a new modified config.
     let mut newconf = context.config().clone();
     let collection = Collection::new(name.clone(), path.to_owned());
@@ -158,11 +175,22 @@ fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyh
     })?;
 
     // Create a new modified cache.
+    let collection = newconf
+        .collections()
+        .get(name)
+        .expect("Should never fail: the collection was added just now");
     let mut newcache = context
         .get_or_load_cache()
         .context("Failed to load cache")?
         .clone();
-    newcache.cache_collection_repos(name.clone(), Default::default());
+    let coll_cache = if refresh {
+        generate_collection_repos_cache(context, collection, false, true)
+            .expect("Should not be `Err(_)` when `keep_going` is `true`")
+            .unwrap_or_default()
+    } else {
+        Default::default()
+    };
+    newcache.cache_collection_repos(name.clone(), coll_cache);
 
     // Save the cache.
     context.save_cache(&newcache).with_context(|| {
