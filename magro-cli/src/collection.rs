@@ -156,6 +156,22 @@ fn add_collection(context: &Context, name: &CollectionName, path: &Path) -> anyh
             context.config_path().display()
         )
     })?;
+
+    // Create a new modified cache.
+    let mut newcache = context
+        .get_or_load_cache()
+        .context("Failed to load cache")?
+        .clone();
+    newcache.cache_collection_repos(name.clone(), Default::default());
+
+    // Save the cache.
+    context.save_cache(&newcache).with_context(|| {
+        anyhow!(
+            "Failed to save cache file {}",
+            context.cache_path().display()
+        )
+    })?;
+
     log::debug!("Added the collection `{}`", name);
 
     Ok(())
@@ -171,6 +187,12 @@ fn unregister_collection(
 ) -> anyhow::Result<()> {
     // Create a new modified config.
     let mut newconf = context.config().clone();
+    // Create a new modified cache.
+    let mut newcache = context
+        .get_or_load_cache()
+        .context("Failed to load cache")?
+        .clone();
+
     for name in names {
         let is_removed = newconf.collections_mut().remove(name).is_some();
         if !is_removed {
@@ -180,6 +202,8 @@ fn unregister_collection(
                 bail!("Collection named {:?} does not exist", name);
             }
         }
+
+        newcache.remove_collection_repos_cache(name);
     }
 
     // Save the config.
@@ -187,6 +211,14 @@ fn unregister_collection(
         anyhow!(
             "Failed to save config file {}",
             context.config_path().display()
+        )
+    })?;
+
+    // Save the cache.
+    context.save_cache(&newcache).with_context(|| {
+        anyhow!(
+            "Failed to save cache file {}",
+            context.cache_path().display()
         )
     })?;
 
@@ -253,6 +285,24 @@ fn rename_collection(
         )
     })?;
     log::debug!("Renamed the collection `{}` to `{}`", old_name, new_name);
+
+    // Create a new modified cache.
+    let mut newcache = context
+        .get_or_load_cache()
+        .context("Failed to load cache")?
+        .clone();
+    let coll_cache = newcache
+        .remove_collection_repos_cache(old_name)
+        .unwrap_or_default();
+    newcache.cache_collection_repos(new_name.clone(), coll_cache);
+
+    // Save the cache.
+    context.save_cache(&newcache).with_context(|| {
+        anyhow!(
+            "Failed to save cache file {}",
+            context.cache_path().display()
+        )
+    })?;
 
     Ok(())
 }
