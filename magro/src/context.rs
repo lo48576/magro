@@ -7,12 +7,16 @@ use std::{
 
 use anyhow::{anyhow, Context as _};
 use directories::{ProjectDirs, UserDirs};
+use once_cell::sync::OnceCell;
 use thiserror::Error as ThisError;
 
-use crate::Config;
+use crate::{cache::Cache, Config};
 
 /// Default config file path relative to the config directory.
 const DEFAULT_CONFIG_RELPATH: &str = "config.toml";
+
+/// Default cache file path relative to the cache directory.
+const DEFAULT_CACHE_RELPATH: &str = "cache.toml";
 
 /// Context error.
 #[derive(Debug, ThisError)]
@@ -38,7 +42,7 @@ fn get_project_dirs() -> anyhow::Result<ProjectDirs> {
 /// Magro context.
 ///
 /// Context is a bundle of config and cached information.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Context {
     /// User directories.
     user_dirs: UserDirs,
@@ -46,8 +50,12 @@ pub struct Context {
     project_dirs: ProjectDirs,
     /// Config file path.
     config_path: PathBuf,
+    /// Cache file path.
+    cache_path: PathBuf,
     /// Config.
     config: Config,
+    /// Lazily loaded cache.
+    cache: OnceCell<Cache>,
 }
 
 impl Context {
@@ -72,11 +80,17 @@ impl Context {
             AsRef::<Path>::as_ref(&config_path)
         );
 
+        let cache_dir = project_dirs.cache_dir();
+        // TODO: How to decide cache file path corresponding to config path?
+        let cache_path = cache_dir.join(DEFAULT_CACHE_RELPATH);
+
         Ok(Self {
             user_dirs,
             config_path,
+            cache_path,
             project_dirs,
             config,
+            cache: OnceCell::new(),
         })
     }
 
@@ -94,6 +108,13 @@ impl Context {
         &self.config_path
     }
 
+    /// Returns the currently used cache file path.
+    #[inline]
+    #[must_use]
+    pub fn cache_path(&self) -> &Path {
+        &self.cache_path
+    }
+
     /// Returns the config.
     #[inline]
     #[must_use]
@@ -105,6 +126,25 @@ impl Context {
     #[inline]
     pub fn save_config(&self, config: &Config) -> io::Result<()> {
         save_config(&self.config_path, config)
+    }
+
+    /// Loads the cache if necessary, and returns the cache.
+    #[inline]
+    pub fn get_or_load_cache(&self) -> io::Result<&Cache> {
+        let cache_path = self.cache_path();
+        self.cache.get_or_try_init(|| Cache::from_path(cache_path))
+    }
+
+    /// Returns the cache if it is already loaded.
+    #[inline]
+    pub fn get_cache(&self) -> Option<&Cache> {
+        self.cache.get()
+    }
+
+    /// Saves the given cache.
+    #[inline]
+    pub fn save_cache(&self, cache: &Cache) -> io::Result<()> {
+        save_cache(&self.cache_path, cache)
     }
 }
 
@@ -165,4 +205,35 @@ pub fn create_default_config_file_if_missing() -> Result<PathBuf, Error> {
     log::debug!("Created default config file to {}", config_path.display());
 
     Ok(config_path)
+}
+
+/// Saves a cache to the given path.
+fn save_cache(path: &Path, cache: &Cache) -> io::Result<()> {
+    use serde::Serialize;
+
+    let content = {
+        let mut content = String::new();
+        let mut ser = toml::Serializer::new(&mut content);
+        //ser.pretty_array(true);
+        // This is expected to always success, because the config is valid and
+        // the serialization does not perform I/O.
+        cache
+            .serialize(&mut ser)
+            .expect("Default cache data should be serializable");
+        content
+    };
+    let cache_dir = path.parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::Other,
+            format!("Attempt to save cache file to invalid path {:?}", path),
+        )
+    })?;
+    if !cache_dir.is_dir() {
+        log::trace!(
+            "Creating a directory {:?} for to save cache file",
+            cache_dir
+        );
+        fs::DirBuilder::new().recursive(true).create(cache_dir)?;
+    }
+    fs::write(path, &content)
 }

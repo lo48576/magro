@@ -6,6 +6,8 @@
 
 pub use self::{config::Config, context::Context};
 
+pub mod cache;
 pub mod collection;
 pub mod config;
 pub mod context;
+pub mod repository;
