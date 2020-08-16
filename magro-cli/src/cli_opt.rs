@@ -9,7 +9,7 @@ use magro::{
 };
 use structopt::StructOpt;
 
-use crate::{collection::CollectionOpt, refresh::RefreshOpt};
+use crate::{collection::CollectionOpt, list::ListOpt, refresh::RefreshOpt};
 
 /// CLI options.
 #[derive(Debug, Clone, StructOpt)]
@@ -25,6 +25,7 @@ impl Opt {
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         match &self.subcommand {
             Subcommand::Collection(opt) => opt.run(context),
+            Subcommand::List(opt) => opt.run(context),
             Subcommand::Refresh(opt) => opt.run(context),
         }
     }
@@ -35,6 +36,11 @@ impl Opt {
 pub enum Subcommand {
     /// Modify collections.
     Collection(CollectionOpt),
+    /// List repositories.
+    ///
+    /// Note that this lists the cached repositories.
+    /// To make the cache up to date, use `refresh` subcommand.
+    List(ListOpt),
     /// Refresh collections.
     Refresh(RefreshOpt),
 }
