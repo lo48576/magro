@@ -17,6 +17,15 @@ use structopt::StructOpt;
 
 use crate::cli_opt::{CollectionNameList, VcsList};
 
+/// Modification for reposiotry path.
+#[derive(Debug, Clone)]
+enum PathModification {
+    /// Raw unmodified path.
+    Raw,
+    /// Relative to collection directory.
+    RelativeToCollection,
+}
+
 /// Options for `refresh` subcommand.
 #[derive(Debug, Clone, StructOpt)]
 #[non_exhaustive]
@@ -64,6 +73,12 @@ impl ListOpt {
             .map(|name| collections.get(name).ok_or(name))
             .peekable();
 
+        let path_modification = if self.relative_to_collection {
+            PathModification::RelativeToCollection
+        } else {
+            PathModification::Raw
+        };
+
         if targets.peek().is_none() {
             list_repos(
                 context,
@@ -71,7 +86,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
-                self.relative_to_collection,
+                path_modification,
             )
         } else {
             list_repos(
@@ -80,7 +95,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
-                self.relative_to_collection,
+                path_modification,
             )
         }
     }
@@ -95,7 +110,7 @@ fn list_repos(
     target_vcs: Option<&HashSet<Vcs>>,
     show_workdir: bool,
     null_data: bool,
-    relative_to_collection: bool,
+    path_modification: PathModification,
 ) -> anyhow::Result<()> {
     let cache = context
         .get_or_load_cache()
@@ -150,23 +165,24 @@ fn list_repos(
                 } else {
                     Cow::Borrowed(abspath.as_ref())
                 };
-                let path_to_show: &Path = if relative_to_collection {
-                    match path_to_show.strip_prefix(&coll_base_path) {
-                        Ok(v) => v,
-                        Err(_) => {
-                            // Note that the working directory of a repository
-                            // could be outside of the collection directory.
-                            log::debug!(
-                                "Directory {:?} might not descendant of {:?}",
-                                path_to_show,
-                                coll_base_path
-                            );
-                            // Use absolute path.
-                            &path_to_show
+                let path_to_show: &Path = match path_modification {
+                    PathModification::Raw => &path_to_show,
+                    PathModification::RelativeToCollection => {
+                        match path_to_show.strip_prefix(&coll_base_path) {
+                            Ok(v) => v,
+                            Err(_) => {
+                                // Note that the working directory of a repository
+                                // could be outside of the collection directory.
+                                log::debug!(
+                                    "Directory {:?} might not descendant of {:?}",
+                                    path_to_show,
+                                    coll_base_path
+                                );
+                                // Use absolute path.
+                                &path_to_show
+                            }
                         }
                     }
-                } else {
-                    &path_to_show
                 };
 
                 print_raw_path(&mut handle, &path_to_show)?;
