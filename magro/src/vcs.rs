@@ -1,9 +1,11 @@
 //! Repository.
 
-use std::{convert::TryFrom, iter, mem, str};
+use std::{borrow::Cow, convert::TryFrom, iter, mem, path::Path, str};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
+
+mod git;
 
 /// VCS parse error.
 #[derive(Debug, Clone, PartialEq, Eq, ThisError)]
@@ -16,6 +18,21 @@ impl VcsParseError {
     #[must_use]
     fn new() -> Self {
         Self(())
+    }
+}
+
+/// VCS operation error.
+#[derive(Debug, ThisError)]
+#[error(transparent)]
+pub struct VcsError {
+    /// Source error.
+    source: anyhow::Error,
+}
+
+impl VcsError {
+    /// Creates a new error.
+    fn new(e: impl Into<anyhow::Error>) -> Self {
+        Self { source: e.into() }
     }
 }
 
@@ -73,6 +90,14 @@ impl Vcs {
     pub fn variants() -> VcsVariants {
         VcsVariants {
             next: Some(Self::Git),
+        }
+    }
+
+    /// Returns working direcotry for the repository if available.
+    #[inline]
+    pub fn workdir<'a>(&self, repo_path: &'a Path) -> Result<Option<Cow<'a, Path>>, VcsError> {
+        match self {
+            Self::Git => git::workdir(repo_path).map_err(VcsError::new),
         }
     }
 }
