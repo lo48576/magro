@@ -1,6 +1,6 @@
 //! Repository.
 
-use std::{convert::TryFrom, str};
+use std::{convert::TryFrom, iter, mem, str};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
@@ -23,6 +23,9 @@ impl VcsParseError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
+// NOTE: Update `<VcsVariants as Iterator>::next()` and
+// `<VcsVariants as ExactSizeIterator>::len()` when variants are changed.
+// NOTE: Variants should be ordered alphabetically.
 pub enum Vcs {
     /// Git.
     Git,
@@ -60,6 +63,15 @@ impl Vcs {
             _ => Err(VcsParseError::new()),
         }
     }
+
+    /// Returns an iterator of VCS types.
+    #[inline]
+    #[must_use]
+    pub fn variants() -> VcsVariants {
+        VcsVariants {
+            next: Some(Self::Git),
+        }
+    }
 }
 
 impl str::FromStr for Vcs {
@@ -81,3 +93,47 @@ impl TryFrom<&str> for Vcs {
         Self::try_from_name_lower(s)
     }
 }
+
+/// Iterator of variants of `Vcs` enum type.
+#[derive(Debug, Clone)]
+pub struct VcsVariants {
+    /// Next variant.
+    next: Option<Vcs>,
+}
+
+impl VcsVariants {
+    /// Returns `next()` value without advancing the iterator.
+    // No need of `&mut` for current implementation, but it is implementation detail.
+    // Keep consistent with `std::iter::Peekable::peek()`.
+    #[inline]
+    #[must_use]
+    pub fn peek(&mut self) -> Option<Vcs> {
+        self.next
+    }
+}
+
+impl Iterator for VcsVariants {
+    type Item = Vcs;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let new_next = match self.next? {
+            Vcs::Git => None,
+        };
+        mem::replace(&mut self.next, new_next)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl ExactSizeIterator for VcsVariants {
+    #[inline]
+    fn len(&self) -> usize {
+        1
+    }
+}
+
+impl iter::FusedIterator for VcsVariants {}
