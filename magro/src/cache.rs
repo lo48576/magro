@@ -119,7 +119,6 @@ pub struct RepoCacheEntry {
     /// Path.
     ///
     /// For git, `.git` directory or `*.git` directory.
-    // This filed
     path: PathBuf,
     /// VCS type.
     vcs: Vcs,
