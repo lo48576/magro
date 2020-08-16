@@ -26,6 +26,8 @@ enum PathBase {
     Root,
     /// Collection directory.
     Collection,
+    /// Home directory.
+    Home,
 }
 
 impl PathBase {
@@ -33,7 +35,7 @@ impl PathBase {
     #[inline]
     #[must_use]
     fn possible_opt_values() -> &'static [&'static str] {
-        &["root", "collection"]
+        &["root", "collection", "home"]
     }
 
     /// Returns the option value.
@@ -43,6 +45,7 @@ impl PathBase {
         match self {
             Self::Root => "root",
             Self::Collection => "collection",
+            Self::Home => "home",
         }
     }
 
@@ -53,6 +56,7 @@ impl PathBase {
         match s {
             "root" => Some(Self::Root),
             "collection" => Some(Self::Collection),
+            "home" => Some(Self::Home),
             _ => None,
         }
     }
@@ -175,6 +179,8 @@ fn list_repos(
     let stdout = io::stdout();
     let mut handle = stdout.lock();
     let newline = if null_data { b"\0" } else { b"\n" };
+    let home_dir = context.home_dir();
+
     for collection in collections {
         let collection =
             collection.map_err(|name| anyhow!("Collection named `{}` does not exist", name))?;
@@ -224,6 +230,7 @@ fn list_repos(
                 let path_to_show: &Path = match path_base {
                     PathBase::Root => &path_to_show,
                     PathBase::Collection => try_relativize(&path_to_show, &coll_base_path),
+                    PathBase::Home => try_relativize(&path_to_show, home_dir),
                 };
 
                 print_raw_path(&mut handle, &path_to_show)?;

@@ -97,7 +97,7 @@ impl Context {
     /// Returns the home directory.
     #[inline]
     #[must_use]
-    pub(crate) fn home_dir(&self) -> &Path {
+    pub fn home_dir(&self) -> &Path {
         self.user_dirs.home_dir()
     }
 
