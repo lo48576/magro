@@ -20,7 +20,10 @@ impl VcsParseError {
 }
 
 /// VCS type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+///
+/// `PartialOrd` and `Ord` compares the VCS types by `name_lower()` in
+/// alphabetical order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 // NOTE: Update `<VcsVariants as Iterator>::next()` and
@@ -194,6 +197,17 @@ mod vcs_tests {
                 vcs,
                 vcs.name_lower().parse::<Vcs>().unwrap(),
                 "FromStr must be able to convert lowercase names into Vcs value"
+            );
+        }
+    }
+
+    #[test]
+    fn ordered_alphabetically() {
+        for (current, next) in Vcs::variants().zip(Vcs::variants().cycle().skip(1)) {
+            assert!(current <= next, "Variants must be ordered alphabetically");
+            assert!(
+                current.name_lower() <= next.name_lower(),
+                "Variants must be ordered alphabetically"
             );
         }
     }
