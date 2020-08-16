@@ -4,6 +4,7 @@ use std::{convert::TryFrom, str};
 
 use magro::{
     collection::{CollectionName, CollectionNameError},
+    vcs::{Vcs, VcsParseError},
     Context,
 };
 use structopt::StructOpt;
@@ -81,5 +82,51 @@ impl<'a> Iterator for CollectionNameListIter<'a> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
+    }
+}
+
+/// Space- or comma-separated VCS types.
+#[derive(Debug, Clone)]
+pub(crate) struct VcsList(Vec<Vcs>);
+
+impl AsRef<[Vcs]> for VcsList {
+    #[inline]
+    fn as_ref(&self) -> &[Vcs] {
+        &self.0
+    }
+}
+
+impl str::FromStr for VcsList {
+    type Err = VcsParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.split(|c: char| c.is_ascii_whitespace() || c == ',')
+            .filter(|s| !s.is_empty())
+            .map(Vcs::try_from)
+            .collect::<Result<Vec<_>, _>>()
+            .map(Self)
+    }
+}
+
+impl<'a> IntoIterator for &'a VcsList {
+    type IntoIter = VcsListIter<'a>;
+    type Item = Vcs;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        VcsListIter(self.0.iter())
+    }
+}
+
+/// Iterator over `VcsList`.
+#[derive(Debug)]
+pub(crate) struct VcsListIter<'a>(std::slice::Iter<'a, Vcs>);
+
+impl<'a> Iterator for VcsListIter<'a> {
+    type Item = Vcs;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().copied()
     }
 }
