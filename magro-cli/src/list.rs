@@ -165,23 +165,11 @@ fn list_repos(
                 } else {
                     Cow::Borrowed(abspath.as_ref())
                 };
+                debug_assert!(path_to_show.is_absolute());
                 let path_to_show: &Path = match path_modification {
                     PathModification::Raw => &path_to_show,
                     PathModification::RelativeToCollection => {
-                        match path_to_show.strip_prefix(&coll_base_path) {
-                            Ok(v) => v,
-                            Err(_) => {
-                                // Note that the working directory of a repository
-                                // could be outside of the collection directory.
-                                log::debug!(
-                                    "Directory {:?} might not descendant of {:?}",
-                                    path_to_show,
-                                    coll_base_path
-                                );
-                                // Use absolute path.
-                                &path_to_show
-                            }
-                        }
+                        try_relativize(&path_to_show, &coll_base_path)
                     }
                 };
 
@@ -192,6 +180,26 @@ fn list_repos(
     }
 
     Ok(())
+}
+
+/// Returns relativized path if succeeded, or returns the raw input if failed.
+fn try_relativize<'a>(path: &'a Path, base: &Path) -> &'a Path {
+    debug_assert!(path.is_absolute());
+    debug_assert!(base.is_absolute());
+
+    if let Ok(relative) = path.strip_prefix(base) {
+        return relative;
+    }
+
+    // Note that the working directory of a repository
+    // could be outside of the collection directory.
+    log::debug!(
+        "Directory {:?} might not be a descendant of {:?}",
+        path,
+        base
+    );
+    // Use absolute path.
+    path
 }
 
 /// Attempts to print the raw path, even when it is invalid UTF-8 sequence.
