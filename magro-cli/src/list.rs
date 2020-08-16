@@ -24,6 +24,11 @@ pub struct ListOpt {
     /// Separates lines by NUL characters.
     #[structopt(long, short = "z")]
     null_data: bool,
+    /// Prints relative path to the collection directory.
+    // TODO: Better (and hopefully shorter) name.
+    // TODO: Make it enum, not boolean.
+    #[structopt(long)]
+    relative_to_collection: bool,
     /// Prints working directory
     #[structopt(long)]
     workdir: bool,
@@ -66,6 +71,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
+                self.relative_to_collection,
             )
         } else {
             list_repos(
@@ -74,6 +80,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
+                self.relative_to_collection,
             )
         }
     }
@@ -88,6 +95,7 @@ fn list_repos(
     target_vcs: Option<&HashSet<Vcs>>,
     show_workdir: bool,
     null_data: bool,
+    relative_to_collection: bool,
 ) -> anyhow::Result<()> {
     let cache = context
         .get_or_load_cache()
@@ -141,6 +149,24 @@ fn list_repos(
                     }
                 } else {
                     Cow::Borrowed(abspath.as_ref())
+                };
+                let path_to_show: &Path = if relative_to_collection {
+                    match path_to_show.strip_prefix(&coll_base_path) {
+                        Ok(v) => v,
+                        Err(_) => {
+                            // Note that the working directory of a repository
+                            // could be outside of the collection directory.
+                            log::debug!(
+                                "Directory {:?} might not descendant of {:?}",
+                                path_to_show,
+                                coll_base_path
+                            );
+                            // Use absolute path.
+                            &path_to_show
+                        }
+                    }
+                } else {
+                    &path_to_show
                 };
 
                 print_raw_path(&mut handle, &path_to_show)?;
