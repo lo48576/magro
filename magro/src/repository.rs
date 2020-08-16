@@ -137,3 +137,64 @@ impl ExactSizeIterator for VcsVariants {
 }
 
 impl iter::FusedIterator for VcsVariants {}
+
+#[cfg(test)]
+mod vcs_tests {
+    use super::*;
+
+    use std::collections::HashSet;
+
+    mod variants_iter {
+        use super::*;
+
+        #[test]
+        fn correct_exact_len() {
+            assert_eq!(
+                Vcs::variants().count(),
+                Vcs::variants().len(),
+                "ExactSizeIterator must be correctly implemented"
+            );
+        }
+
+        #[test]
+        fn no_duplicates() {
+            let variants: HashSet<_> = Vcs::variants().map(|v| mem::discriminant(&v)).collect();
+            assert_eq!(
+                variants.len(),
+                Vcs::variants().len(),
+                "VcsVariants iterator must not return duplicate variants"
+            );
+        }
+    }
+
+    #[test]
+    fn unique_name_lower() {
+        let names: HashSet<_> = Vcs::variants().map(|v| v.name_lower()).collect();
+        assert_eq!(
+            names.len(),
+            Vcs::variants().len(),
+            "Vcs::name_lower() must not return the same value for different variants"
+        );
+    }
+
+    #[test]
+    fn consistent_from_str() {
+        for vcs in Vcs::variants() {
+            assert_eq!(
+                vcs,
+                Vcs::try_from_name_lower(vcs.name_lower()).unwrap(),
+                "Vcs::try_from_name_lower must be able to convert lowercase names into Vcs value"
+            );
+            assert_eq!(
+                vcs,
+                Vcs::try_from(vcs.name_lower()).unwrap(),
+                "TryFrom must be able to convert lowercase names into Vcs value"
+            );
+            assert_eq!(
+                vcs,
+                vcs.name_lower().parse::<Vcs>().unwrap(),
+                "FromStr must be able to convert lowercase names into Vcs value"
+            );
+        }
+    }
+}
