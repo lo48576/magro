@@ -17,13 +17,13 @@ use structopt::StructOpt;
 
 use crate::cli_opt::{CollectionNameList, VcsList};
 
-/// Modification for reposiotry path.
-#[derive(Debug, Clone)]
-enum PathModification {
-    /// Raw unmodified path.
-    Raw,
-    /// Relative to collection directory.
-    RelativeToCollection,
+/// Path base.
+#[derive(Debug, Clone, Copy)]
+enum PathBase {
+    /// Filesystem's oot directory.
+    Root,
+    /// Collection directory.
+    Collection,
 }
 
 /// Options for `refresh` subcommand.
@@ -73,10 +73,10 @@ impl ListOpt {
             .map(|name| collections.get(name).ok_or(name))
             .peekable();
 
-        let path_modification = if self.relative_to_collection {
-            PathModification::RelativeToCollection
+        let path_base = if self.relative_to_collection {
+            PathBase::Collection
         } else {
-            PathModification::Raw
+            PathBase::Root
         };
 
         if targets.peek().is_none() {
@@ -86,7 +86,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
-                path_modification,
+                path_base,
             )
         } else {
             list_repos(
@@ -95,7 +95,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
-                path_modification,
+                path_base,
             )
         }
     }
@@ -110,7 +110,7 @@ fn list_repos(
     target_vcs: Option<&HashSet<Vcs>>,
     show_workdir: bool,
     null_data: bool,
-    path_modification: PathModification,
+    path_base: PathBase,
 ) -> anyhow::Result<()> {
     let cache = context
         .get_or_load_cache()
@@ -166,11 +166,9 @@ fn list_repos(
                     Cow::Borrowed(abspath.as_ref())
                 };
                 debug_assert!(path_to_show.is_absolute());
-                let path_to_show: &Path = match path_modification {
-                    PathModification::Raw => &path_to_show,
-                    PathModification::RelativeToCollection => {
-                        try_relativize(&path_to_show, &coll_base_path)
-                    }
+                let path_to_show: &Path = match path_base {
+                    PathBase::Root => &path_to_show,
+                    PathBase::Collection => try_relativize(&path_to_show, &coll_base_path),
                 };
 
                 print_raw_path(&mut handle, &path_to_show)?;
