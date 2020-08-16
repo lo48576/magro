@@ -3,8 +3,10 @@
 use std::{
     borrow::Cow,
     collections::HashSet,
+    fmt,
     io::{self, Write},
     path::Path,
+    str,
 };
 
 use anyhow::{anyhow, Context as _};
@@ -26,6 +28,59 @@ enum PathBase {
     Collection,
 }
 
+impl PathBase {
+    /// Returns a list of possible options.
+    #[inline]
+    #[must_use]
+    fn possible_opt_values() -> &'static [&'static str] {
+        &["root", "collection"]
+    }
+
+    /// Returns the option value.
+    #[inline]
+    #[must_use]
+    fn as_opt_value(&self) -> &'static str {
+        match self {
+            Self::Root => "root",
+            Self::Collection => "collection",
+        }
+    }
+
+    /// Parses the option value.
+    #[inline]
+    #[must_use]
+    fn from_opt_value(s: &str) -> Option<Self> {
+        match s {
+            "root" => Some(Self::Root),
+            "collection" => Some(Self::Collection),
+            _ => None,
+        }
+    }
+}
+
+impl Default for PathBase {
+    #[inline]
+    fn default() -> Self {
+        PathBase::Root
+    }
+}
+
+impl str::FromStr for PathBase {
+    type Err = anyhow::Error;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_opt_value(s).ok_or_else(|| anyhow!("Unsupported path style {:?}", s))
+    }
+}
+
+impl fmt::Display for PathBase {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.as_opt_value())
+    }
+}
+
 /// Options for `refresh` subcommand.
 #[derive(Debug, Clone, StructOpt)]
 #[non_exhaustive]
@@ -33,11 +88,16 @@ pub struct ListOpt {
     /// Separates lines by NUL characters.
     #[structopt(long, short = "z")]
     null_data: bool,
-    /// Prints relative path to the collection directory.
-    // TODO: Better (and hopefully shorter) name.
-    // TODO: Make it enum, not boolean.
-    #[structopt(long)]
-    relative_to_collection: bool,
+    /// Prints relativized paths using the specified base directory.
+    ///
+    /// Note that relativization can fail for some paths. In such case, `root`
+    /// is used as fallback.
+    #[structopt(
+        long,
+        possible_values = PathBase::possible_opt_values(),
+        default_value = "root"
+    )]
+    path_base: PathBase,
     /// Prints working directory
     #[structopt(long)]
     workdir: bool,
@@ -54,10 +114,11 @@ impl ListOpt {
     /// Runs the actual operation.
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         log::trace!(
-            "list vcs={:?} collections={:?} null_data={} workdir={}",
+            "list vcs={:?} collections={:?} null_data={} path_base={} workdir={}",
             self.vcs,
             self.collections,
             self.null_data,
+            self.path_base,
             self.workdir
         );
 
@@ -73,12 +134,6 @@ impl ListOpt {
             .map(|name| collections.get(name).ok_or(name))
             .peekable();
 
-        let path_base = if self.relative_to_collection {
-            PathBase::Collection
-        } else {
-            PathBase::Root
-        };
-
         if targets.peek().is_none() {
             list_repos(
                 context,
@@ -86,7 +141,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
-                path_base,
+                self.path_base,
             )
         } else {
             list_repos(
@@ -95,7 +150,7 @@ impl ListOpt {
                 target_vcs.as_ref(),
                 self.workdir,
                 self.null_data,
-                path_base,
+                self.path_base,
             )
         }
     }
@@ -218,4 +273,16 @@ fn print_raw_path<W: io::Write>(writer: &mut W, path: &Path) -> io::Result<()> {
 #[inline]
 fn print_raw_path<W: io::Write>(writer: &mut W, path: &Path) -> io::Result<()> {
     write!(writer, "{}", path.display())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn path_style_consistent_string_conversion() {
+        for &opt in PathBase::possible_opt_values() {
+            assert_eq!(opt, opt.parse::<PathBase>().unwrap().to_string())
+        }
+    }
 }
