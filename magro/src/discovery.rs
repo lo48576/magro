@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use git2::{Repository, RepositoryOpenFlags};
 use thiserror::Error as ThisError;
 
-use crate::repository::Vcs;
+use crate::vcs::Vcs;
 
 /// Repository discovery error.
 #[derive(Debug, ThisError)]

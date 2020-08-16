@@ -9,7 +9,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{collection::CollectionName, discovery::RepoEntry, repository::Vcs};
+use crate::{collection::CollectionName, discovery::RepoEntry, vcs::Vcs};
 
 /// Global cache data.
 ///

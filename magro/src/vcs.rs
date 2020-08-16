@@ -40,7 +40,7 @@ impl Vcs {
     /// # Examples
     ///
     /// ```
-    /// # use magro::repository::Vcs;
+    /// # use magro::vcs::Vcs;
     /// assert_eq!(Vcs::Git.name_lower(), "git");
     /// ```
     pub fn name_lower(&self) -> &'static str {
@@ -54,7 +54,7 @@ impl Vcs {
     /// # Examples
     ///
     /// ```
-    /// # use magro::repository::Vcs;
+    /// # use magro::vcs::Vcs;
     /// assert_eq!(Vcs::try_from_name_lower("git"), Ok(Vcs::Git));
     ///
     /// assert!(Vcs::try_from_name_lower("Git").is_err());
