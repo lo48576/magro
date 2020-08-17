@@ -102,9 +102,9 @@ impl Vcs {
     }
 
     /// Clones a repository at the given URI into local directory.
-    pub fn clone(&self, uri: &str, dest: &Path) -> Result<(), VcsError> {
+    pub fn clone(&self, uri: &str, dest: &Path, bare: bool) -> Result<(), VcsError> {
         match self {
-            Self::Git => git::clone(uri, dest, false).map_err(VcsError::new),
+            Self::Git => git::clone(uri, dest, bare).map_err(VcsError::new),
         }
     }
 }
