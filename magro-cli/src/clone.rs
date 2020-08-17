@@ -6,6 +6,8 @@ use anyhow::{bail, Context as _};
 use magro::{collection::CollectionName, vcs::Vcs, Context};
 use structopt::StructOpt;
 
+use crate::cli_opt::OptionBool;
+
 /// Options for `clone` subcommand.
 #[derive(Debug, Clone, StructOpt)]
 #[non_exhaustive]
@@ -23,19 +25,27 @@ pub struct CloneOpt {
         possible_values = &Vcs::variants().map(|v| v.name_lower()).collect::<Vec<_>>(),
     )]
     vcs: Option<Vcs>,
+    /// Whether to clone bare repository.
+    #[structopt(
+        long,
+        possible_values = OptionBool::possible_opt_values(),
+        default_value = "auto",
+    )]
+    bare: OptionBool,
 }
 
 impl CloneOpt {
     /// Runs the actual operation.
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         log::trace!(
-            "clone uri={:?}, collection={:?}, vcs={:?}",
+            "clone uri={:?}, collection={:?}, vcs={:?}, bare={}",
             self.uri,
             self.collection,
-            self.vcs
+            self.vcs,
+            self.bare
         );
 
-        clone_repo(context, &self.uri, &self.collection, self.vcs)
+        clone_repo(context, &self.uri, &self.collection, self.vcs, self.bare)
     }
 }
 
@@ -45,6 +55,7 @@ fn clone_repo(
     uri: &str,
     collection_name: &CollectionName,
     vcs_opt: Option<Vcs>,
+    bare: OptionBool,
 ) -> anyhow::Result<()> {
     let collection = context
         .config()
@@ -57,9 +68,11 @@ fn clone_repo(
         .with_context(|| format!("Failed to get VCS type for URI {:?}", uri))?;
     log::debug!("Assumed VCS is {}", vcs.name_lower());
 
+    let bare = bare == OptionBool::Yes;
+
     let reldest = match vcs {
         Vcs::Git => {
-            git_dest_relpath(uri, false).context("Failed to determine clone destination path")?
+            git_dest_relpath(uri, bare).context("Failed to determine clone destination path")?
         }
         vcs => {
             // This should not happen because `magro-cli` implementation is
@@ -72,7 +85,7 @@ fn clone_repo(
     let absdest = collection.abspath(context).join(reldest);
     log::debug!("Destination directory is {:?}", absdest);
 
-    vcs.clone(uri, &absdest)
+    vcs.clone(uri, &absdest, bare)
         .with_context(|| format!("Failed to clone repository {:?} into {:?}", uri, absdest))?;
 
     Ok(())
