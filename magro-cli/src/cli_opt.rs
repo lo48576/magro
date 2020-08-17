@@ -1,7 +1,8 @@
 //! CLI options.
 
-use std::{convert::TryFrom, str};
+use std::{convert::TryFrom, fmt, str};
 
+use anyhow::anyhow;
 use magro::{
     collection::{CollectionName, CollectionNameError},
     vcs::{Vcs, VcsParseError},
@@ -9,7 +10,7 @@ use magro::{
 };
 use structopt::StructOpt;
 
-use crate::{collection::CollectionOpt, list::ListOpt, refresh::RefreshOpt};
+use crate::{clone::CloneOpt, collection::CollectionOpt, list::ListOpt, refresh::RefreshOpt};
 
 /// CLI options.
 #[derive(Debug, Clone, StructOpt)]
@@ -24,6 +25,7 @@ impl Opt {
     /// Runs the actual operation.
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         match &self.subcommand {
+            Subcommand::Clone(opt) => opt.run(context),
             Subcommand::Collection(opt) => opt.run(context),
             Subcommand::List(opt) => opt.run(context),
             Subcommand::Refresh(opt) => opt.run(context),
@@ -34,6 +36,8 @@ impl Opt {
 /// Subcommand.
 #[derive(Debug, Clone, StructOpt)]
 pub enum Subcommand {
+    /// Clone repository.
+    Clone(CloneOpt),
     /// Modify collections.
     Collection(CollectionOpt),
     /// List repositories.
@@ -134,5 +138,56 @@ impl<'a> Iterator for VcsListIter<'a> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().copied()
+    }
+}
+
+/// Optional boolean.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OptionBool {
+    /// Auto
+    Auto,
+    /// Yes.
+    Yes,
+    /// No.
+    No,
+}
+
+impl OptionBool {
+    /// Returns possible option values.
+    #[inline]
+    #[must_use]
+    pub(crate) fn possible_opt_values() -> &'static [&'static str] {
+        &["auto", "yes", "no"]
+    }
+
+    /// Returns the string value.
+    #[inline]
+    #[must_use]
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Yes => "yes",
+            Self::No => "no",
+        }
+    }
+}
+
+impl str::FromStr for OptionBool {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "auto" => Ok(Self::Auto),
+            "yes" | "y" | "true" => Ok(Self::Yes),
+            "no" | "n" | "false" => Ok(Self::No),
+            v => Err(anyhow!("Unsupported value {:?}", v)),
+        }
+    }
+}
+
+impl fmt::Display for OptionBool {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }

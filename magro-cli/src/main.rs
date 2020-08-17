@@ -5,6 +5,7 @@ use structopt::StructOpt;
 use self::cli_opt::Opt;
 
 pub(crate) mod cli_opt;
+pub(crate) mod clone;
 pub(crate) mod collection;
 pub(crate) mod list;
 pub(crate) mod refresh;
