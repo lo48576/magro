@@ -100,6 +100,13 @@ impl Vcs {
             Self::Git => git::workdir(repo_path).map_err(VcsError::new),
         }
     }
+
+    /// Clones a repository at the given URI into local directory.
+    pub fn clone(&self, uri: &str, dest: &Path) -> Result<(), VcsError> {
+        match self {
+            Self::Git => git::clone(uri, dest, false).map_err(VcsError::new),
+        }
+    }
 }
 
 impl str::FromStr for Vcs {
