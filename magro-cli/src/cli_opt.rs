@@ -9,7 +9,7 @@ use magro::{
 };
 use structopt::StructOpt;
 
-use crate::{collection::CollectionOpt, list::ListOpt, refresh::RefreshOpt};
+use crate::{clone::CloneOpt, collection::CollectionOpt, list::ListOpt, refresh::RefreshOpt};
 
 /// CLI options.
 #[derive(Debug, Clone, StructOpt)]
@@ -24,6 +24,7 @@ impl Opt {
     /// Runs the actual operation.
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         match &self.subcommand {
+            Subcommand::Clone(opt) => opt.run(context),
             Subcommand::Collection(opt) => opt.run(context),
             Subcommand::List(opt) => opt.run(context),
             Subcommand::Refresh(opt) => opt.run(context),
@@ -34,6 +35,8 @@ impl Opt {
 /// Subcommand.
 #[derive(Debug, Clone, StructOpt)]
 pub enum Subcommand {
+    /// Clone repository.
+    Clone(CloneOpt),
     /// Modify collections.
     Collection(CollectionOpt),
     /// List repositories.
