@@ -3,13 +3,13 @@
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet},
-    fs, io,
+    fs, io, iter,
     path::{Path, PathBuf},
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::{collection::CollectionName, discovery::RepoEntry, repository::Vcs};
+use crate::{collection::CollectionName, discovery::RepoEntry, vcs::Vcs};
 
 /// Global cache data.
 ///
@@ -47,6 +47,13 @@ impl Cache {
                 Ok(Self::default())
             }
         }
+    }
+
+    /// Returns the collection cache.
+    #[inline]
+    #[must_use]
+    pub fn collection_repos(&self, name: &CollectionName) -> Option<&CollectionReposCache> {
+        self.collections.get(name.as_str())
     }
 
     /// Sets the given collection cache.
@@ -87,6 +94,43 @@ impl Extend<RepoCacheEntry> for CollectionReposCache {
     }
 }
 
+impl CollectionReposCache {
+    /// Returns a sorted iterator of repository cache entries.
+    #[inline]
+    #[must_use]
+    pub fn repositories(&self) -> CollectionRepoCacheIter<'_> {
+        CollectionRepoCacheIter::new(self)
+    }
+}
+
+/// A sorted iterator of repository cache entries.
+#[derive(Debug, Clone)]
+pub struct CollectionRepoCacheIter<'a> {
+    /// Inner iterator.
+    inner: std::collections::btree_set::Iter<'a, RepoCacheEntryWrapper>,
+}
+
+impl<'a> CollectionRepoCacheIter<'a> {
+    /// Creates a new iterator.
+    #[inline]
+    #[must_use]
+    fn new(cache: &'a CollectionReposCache) -> Self {
+        Self {
+            inner: cache.repos.iter(),
+        }
+    }
+}
+
+impl<'a> Iterator for CollectionRepoCacheIter<'a> {
+    type Item = &'a RepoCacheEntry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|wrapper| &wrapper.0)
+    }
+}
+
+impl iter::FusedIterator for CollectionRepoCacheIter<'_> {}
+
 /// A wrapper to compare `RepoCacheEntry` using only path.
 #[derive(Debug, Clone, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -119,7 +163,6 @@ pub struct RepoCacheEntry {
     /// Path.
     ///
     /// For git, `.git` directory or `*.git` directory.
-    // This filed
     path: PathBuf,
     /// VCS type.
     vcs: Vcs,

@@ -11,4 +11,4 @@ pub mod collection;
 pub mod config;
 pub mod context;
 pub mod discovery;
-pub mod repository;
+pub mod vcs;

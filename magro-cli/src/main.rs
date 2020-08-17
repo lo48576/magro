@@ -6,6 +6,7 @@ use self::cli_opt::Opt;
 
 pub(crate) mod cli_opt;
 pub(crate) mod collection;
+pub(crate) mod list;
 pub(crate) mod refresh;
 
 fn main() -> anyhow::Result<()> {
