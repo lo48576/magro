@@ -28,7 +28,7 @@ fn init_logger() {
     const DEFAULT_LOG_FILTER: &str = "magro=debug";
     /// Default log filter for release build.
     #[cfg(not(debug_assertions))]
-    const DEFAULT_LOG_FILTER: &str = "magro=info";
+    const DEFAULT_LOG_FILTER: &str = "magro=warn";
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(DEFAULT_LOG_FILTER))
         .init();
