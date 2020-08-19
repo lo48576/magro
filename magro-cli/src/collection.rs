@@ -27,6 +27,18 @@ impl CollectionOpt {
     /// Runs the actual operation.
     pub fn run(&self, context: &Context) -> anyhow::Result<()> {
         match &self.subcommand {
+            Subcommand::SetDefault {
+                name,
+                unset: _unset,
+            } => {
+                debug_assert_eq!(
+                    name.is_none(),
+                    *_unset,
+                    "Either of `<name>` or `--unset` should be specified"
+                );
+                log::trace!("collection set-default name={:?}", name);
+                set_default(context, name.as_ref())
+            }
             Subcommand::Add {
                 name,
                 path,
@@ -86,6 +98,15 @@ impl CollectionOpt {
 /// Subcommand of `collection`.
 #[derive(Debug, Clone, StructOpt)]
 pub enum Subcommand {
+    /// Sets the default collection for some operations.
+    SetDefault {
+        /// Collection name.
+        #[structopt(parse(try_from_str), required_unless = "unset")]
+        name: Option<CollectionName>,
+        /// Unsets the default collection.
+        #[structopt(long, conflicts_with_all = &["name"])]
+        unset: bool,
+    },
     /// Adds a new collection.
     Add {
         /// Collection name.
@@ -149,6 +170,33 @@ pub enum Subcommand {
         #[structopt(parse(from_os_str))]
         path: PathBuf,
     },
+}
+
+/// Sets the default collection.
+fn set_default(context: &Context, name: Option<&CollectionName>) -> anyhow::Result<()> {
+    // Create a new modified config.
+    let mut newconf = context.config().clone();
+    if let Some(name) = name {
+        if newconf.collections().get(name).is_none() {
+            bail!("Collection named `{}` not found", name);
+        }
+    }
+    newconf.set_default_collection(name.cloned());
+
+    // Save the config.
+    context.save_config(&newconf).with_context(|| {
+        anyhow!(
+            "Failed to save config file {}",
+            context.config_path().display()
+        )
+    })?;
+
+    match name {
+        Some(name) => log::trace!("Set default collection to `{}`", name),
+        None => log::trace!("Unset default colleciton"),
+    }
+
+    Ok(())
 }
 
 /// Adds the collection.

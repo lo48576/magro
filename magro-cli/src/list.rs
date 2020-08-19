@@ -22,7 +22,7 @@ use crate::cli_opt::{CollectionNameList, VcsList};
 /// Path base.
 #[derive(Debug, Clone, Copy)]
 enum PathBase {
-    /// Filesystem's oot directory.
+    /// Filesystem's root directory.
     Root,
     /// Collection directory.
     Collection,
@@ -85,7 +85,7 @@ impl fmt::Display for PathBase {
     }
 }
 
-/// Options for `refresh` subcommand.
+/// Options for `list` subcommand.
 #[derive(Debug, Clone, StructOpt)]
 #[non_exhaustive]
 pub struct ListOpt {
@@ -110,6 +110,8 @@ pub struct ListOpt {
     #[structopt(long, parse(try_from_str), multiple = true)]
     vcs: Vec<VcsList>,
     /// Prints only repositories of the specified collections.
+    ///
+    /// If no collections are specified, it behaves as all collections are given.
     #[structopt(long, short, parse(try_from_str))]
     collections: Vec<CollectionNameList>,
 }
