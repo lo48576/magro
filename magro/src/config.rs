@@ -49,4 +49,17 @@ impl Config {
     pub fn collections_mut(&mut self) -> &mut Collections {
         &mut self.collections
     }
+
+    /// Returns a default collection.
+    #[inline]
+    #[must_use]
+    pub fn default_collection(&self) -> Option<&CollectionName> {
+        self.default_collection.as_ref()
+    }
+
+    /// Sets default collection to the given name.
+    #[inline]
+    pub fn set_default_collection(&mut self, name: Option<CollectionName>) {
+        self.default_collection = name;
+    }
 }
