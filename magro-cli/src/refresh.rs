@@ -37,7 +37,9 @@ pub struct RefreshOpt {
     /// exit with failure (i.e. errors won't be completely ignored).
     #[structopt(long)]
     keep_going: bool,
-    /// Refresh collections.
+    /// Collections to refresh.
+    ///
+    /// If no collections are specified, it behaves as all collections are given.
     #[structopt(long, short, parse(try_from_str), multiple = true)]
     collections: Vec<CollectionNameList>,
 }
