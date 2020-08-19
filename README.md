@@ -1,7 +1,7 @@
 # magro
 
 [![Build Status](https://gitlab.com/lo48576/magro/badges/develop/pipeline.svg)](https://gitlab.com/lo48576/magro/pipelines/)
-![Minimum supported rustc version: 1.44](https://img.shields.io/badge/rustc-1.44+-lightgray.svg)
+![Minimum supported rustc version: 1.45](https://img.shields.io/badge/rustc-1.45+-lightgray.svg)
 
 magro: MAnage Git RepOsitories.
 
