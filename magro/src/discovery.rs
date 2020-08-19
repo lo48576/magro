@@ -167,35 +167,34 @@ impl RepoSeeker {
                  and it should have a filename",
             );
 
-            // Check if the dir is a `.git` directory under a working directory
-            // of a git repository.
-            if filename == ".git" {
+            // Check if the directory is a `.git` directory or a bare repository.
+            if filename == ".git" || path.extension().map_or(false, |ext| ext == ".git") {
                 match test_git_directory(path) {
-                    Ok(_) => {
+                    Ok(repo) => {
                         // Get out of `.git` directory.
                         self.dir_walker.skip_current_dir();
-                        // Get out of working directory of the repository.
-                        self.dir_walker.skip_current_dir();
-                        return Ok(Some(RepoEntry::new(Vcs::Git, entry.into_path())));
-                    }
-                    Err(e) => {
-                        log::debug!("Directory {:?} is not a git directory: {}", path, e);
-                    }
-                }
-            }
 
-            // Check if the dir is a bare git repository.
-            if path.extension().map_or(false, |ext| ext == ".git") {
-                // `*.git` directory.
-                // Check whether this is a bare git repository.
-                match test_git_directory(path) {
-                    Ok(_) => {
-                        // Get out of working directory of the repository.
-                        self.dir_walker.skip_current_dir();
+                        let workdir = repo.workdir();
+                        let parent = path
+                            .parent()
+                            .expect("`path` has the seek root directory as its ancestor");
+                        if workdir == Some(parent) {
+                            log::trace!(
+                                "Skipping {:?} as it is the working directory of {:?}",
+                                parent,
+                                path
+                            );
+                            // Get out of working directory of the repository.
+                            self.dir_walker.skip_current_dir();
+                        }
                         return Ok(Some(RepoEntry::new(Vcs::Git, entry.into_path())));
                     }
                     Err(e) => {
-                        log::debug!("Directory {:?} is not a bare git repository: {}", path, e);
+                        log::debug!(
+                            "Directory {:?} is neither a git directory nor a bare repository: {}",
+                            path,
+                            e
+                        );
                     }
                 }
             }
@@ -214,14 +213,11 @@ impl Iterator for RepoSeeker {
 
 /// Tests if the directory is a git directory.
 #[inline]
-fn test_git_directory(gitdir: &Path) -> Result<(), git2::Error> {
+fn test_git_directory(gitdir: &Path) -> Result<Repository, git2::Error> {
     // NO_SEARCH: No need of extra traversal because we already have
     // candidate path of the git directory.
     // NO_DOTGIT: No need of appending `/.git` because we already have
     // `.git` directory path.
-    // BARE: No need of loading repository config immediately, because we are
-    // just testing if it is a git repository, and don't perform any more operations.
-    let open_flags =
-        RepositoryOpenFlags::NO_SEARCH | RepositoryOpenFlags::NO_DOTGIT | RepositoryOpenFlags::BARE;
-    Repository::open_ext(&gitdir, open_flags, iter::empty::<&str>()).map(|_| ())
+    let open_flags = RepositoryOpenFlags::NO_SEARCH | RepositoryOpenFlags::NO_DOTGIT;
+    Repository::open_ext(&gitdir, open_flags, iter::empty::<&str>())
 }
