@@ -16,7 +16,7 @@ pub struct CloneOpt {
     uri: String,
     /// Collection to put the cloned repository.
     #[structopt(long, short)]
-    collection: CollectionName,
+    collection: Option<CollectionName>,
     /// VCS to use.
     ///
     /// If not specified, the program attempt to detect VCS automatically.
@@ -45,7 +45,13 @@ impl CloneOpt {
             self.bare
         );
 
-        clone_repo(context, &self.uri, &self.collection, self.vcs, self.bare)
+        clone_repo(
+            context,
+            &self.uri,
+            self.collection.as_ref(),
+            self.vcs,
+            self.bare,
+        )
     }
 }
 
@@ -53,15 +59,25 @@ impl CloneOpt {
 fn clone_repo(
     context: &Context,
     uri: &str,
-    collection_name: &CollectionName,
+    collection_name: Option<&CollectionName>,
     vcs_opt: Option<Vcs>,
     bare: OptionBool,
 ) -> anyhow::Result<()> {
-    let collection = context
-        .config()
-        .collections()
-        .get(collection_name)
-        .with_context(|| format!("Collection `{}` not found", collection_name))?;
+    let collection = if let Some(name) = collection_name {
+        context
+            .config()
+            .collections()
+            .get(name)
+            .with_context(|| format!("Collection `{}` not found", name))?
+    } else if let Some(name) = context.config().default_collection() {
+        context
+            .config()
+            .collections()
+            .get(name)
+            .with_context(|| format!("Default collection `{}` not found", name))?
+    } else {
+        bail!("No target collection specified");
+    };
 
     let vcs = vcs_opt
         .or_else(|| suppose_vcs_from_uri(uri))
