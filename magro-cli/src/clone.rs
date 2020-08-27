@@ -1,9 +1,9 @@
 //! `clone` subcommand.
 
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, iter, path::Path};
 
 use anyhow::{bail, Context as _};
-use magro::{collection::CollectionName, vcs::Vcs, Context};
+use magro::{cache::RepoCacheEntry, collection::CollectionName, vcs::Vcs, Context};
 use structopt::StructOpt;
 
 use crate::cli_opt::OptionBool;
@@ -98,11 +98,29 @@ fn clone_repo(
     };
     assert!(reldest.is_relative());
 
-    let absdest = collection.abspath(context).join(reldest);
+    let absdest = collection.abspath(context).join(&reldest);
     log::debug!("Destination directory is {:?}", absdest);
 
     vcs.clone(uri, &absdest, bare)
         .with_context(|| format!("Failed to clone repository {:?} into {:?}", uri, absdest))?;
+
+    // Update cache.
+    let mut newcache = context
+        .get_or_load_cache()
+        .context("Failed to load cache file")?
+        .clone();
+    if let Some(mut repos) = newcache.remove_collection_repos_cache(collection.name()) {
+        let entry = RepoCacheEntry::new(vcs, reldest);
+        // Use `extend_one` once stabilized.
+        // See <https://github.com/rust-lang/rust/issues/72631>.
+        repos.extend(iter::once(entry));
+        newcache.cache_collection_repos(collection.name().to_owned(), repos);
+    }
+
+    // Save the cache file.
+    context
+        .save_cache(&newcache)
+        .context("Failed to save cache file")?;
 
     Ok(())
 }
