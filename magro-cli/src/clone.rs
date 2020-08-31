@@ -126,12 +126,35 @@ fn clone_repo(
 }
 
 /// Tries to suppose VCS type for the given URI.
+// TODO: Write unit tests.
 fn suppose_vcs_from_uri(uri: &str) -> Option<Vcs> {
     if uri.ends_with(".git") {
         return Some(Vcs::Git);
     }
     if uri.starts_with("git://") {
         return Some(Vcs::Git);
+    }
+    if let Some(authority_start) = uri.find("://").map(|v| v + 3) {
+        if let Some(first_slash) = uri[authority_start..]
+            .find('/')
+            .map(|v| v + authority_start)
+        {
+            let hostname = {
+                // authority: `[ user [ ':' pass ] '@' ] hostname [':' port ]`
+                let authority = &uri[authority_start..first_slash];
+                let hostname_start = authority.rfind('@').map_or(0, |v| v + 1);
+                let hostname_end = authority
+                    .rfind(':')
+                    .filter(|&v| v > hostname_start)
+                    .unwrap_or_else(|| authority.len());
+                &authority[hostname_start..hostname_end]
+            };
+            log::trace!("Hostname of {:?} is {:?}", uri, hostname);
+
+            if hostname.starts_with("git") {
+                return Some(Vcs::Git);
+            }
+        }
     }
 
     None
