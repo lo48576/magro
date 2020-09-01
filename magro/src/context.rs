@@ -10,10 +10,16 @@ use directories::{ProjectDirs, UserDirs};
 use once_cell::sync::OnceCell;
 use thiserror::Error as ThisError;
 
-use crate::{cache::Cache, Config};
+use crate::{
+    cache::Cache,
+    config::{CollectionsConfig, Config},
+};
 
 /// Default config file path relative to the config directory.
 const DEFAULT_CONFIG_RELPATH: &str = "config.toml";
+
+/// Default collections config file path relative to the config directory.
+const DEFAULT_COLLECTIONS_CONFIG_RELPATH: &str = "collections.toml";
 
 /// Default cache file path relative to the cache directory.
 const DEFAULT_CACHE_RELPATH: &str = "cache.toml";
@@ -50,10 +56,14 @@ pub struct Context {
     project_dirs: ProjectDirs,
     /// Config file path.
     config_path: PathBuf,
+    /// Collections config file path.
+    collections_config_path: PathBuf,
     /// Cache file path.
     cache_path: PathBuf,
     /// Config.
     config: Config,
+    /// Collections config.
+    collections_config: CollectionsConfig,
     /// Lazily loaded cache.
     cache: OnceCell<Cache>,
 }
@@ -79,6 +89,20 @@ impl Context {
             AsRef::<Path>::as_ref(&config_path)
         );
 
+        let collections_config_path = conf_dir.join(DEFAULT_COLLECTIONS_CONFIG_RELPATH);
+        let collections_config = CollectionsConfig::from_path(&collections_config_path)
+            .with_context(|| {
+                anyhow!(
+                    "Failed to load the collections config file {}",
+                    collections_config_path.display()
+                )
+            })
+            .map_err(Error::new)?;
+        log::debug!(
+            "Loaded collections config file {:?}",
+            AsRef::<Path>::as_ref(&collections_config_path)
+        );
+
         let cache_dir = project_dirs.cache_dir();
         // TODO: How to decide cache file path corresponding to config path?
         let cache_path = cache_dir.join(DEFAULT_CACHE_RELPATH);
@@ -86,9 +110,11 @@ impl Context {
         Ok(Self {
             user_dirs,
             config_path,
+            collections_config_path,
             cache_path,
             project_dirs,
             config,
+            collections_config,
             cache: OnceCell::new(),
         })
     }
@@ -105,6 +131,13 @@ impl Context {
     #[must_use]
     pub fn config_path(&self) -> &Path {
         &self.config_path
+    }
+
+    /// Returns the currently used collections config path.
+    #[inline]
+    #[must_use]
+    pub fn collections_config_path(&self) -> &Path {
+        &self.collections_config_path
     }
 
     /// Returns the currently used cache file path.
@@ -125,6 +158,19 @@ impl Context {
     #[inline]
     pub fn save_config(&self, config: &Config) -> io::Result<()> {
         save_config(&self.config_path, config)
+    }
+
+    /// Returns the collections config.
+    #[inline]
+    #[must_use]
+    pub fn collections_config(&self) -> &CollectionsConfig {
+        &self.collections_config
+    }
+
+    /// Saves the given collections config.
+    #[inline]
+    pub fn save_collections_config(&self, config: &CollectionsConfig) -> io::Result<()> {
+        config.save_to_path(&self.collections_config_path)
     }
 
     /// Loads the cache if necessary, and returns the cache.
