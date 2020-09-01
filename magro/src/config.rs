@@ -18,7 +18,7 @@ pub struct Config {}
 impl Config {
     /// Loads a config from a file at the given path.
     #[inline]
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
+    pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
         load::from_path(path.as_ref())
     }
 }
