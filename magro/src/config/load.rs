@@ -20,7 +20,7 @@ pub struct LoadError {
 impl LoadError {
     /// Creates a new decode error.
     #[inline]
-    fn from_decode(e: impl Into<anyhow::Error>) -> Self {
+    pub(super) fn from_decode(e: impl Into<anyhow::Error>) -> Self {
         Self {
             kind: LoadErrorKind::Decode,
             source: e.into(),

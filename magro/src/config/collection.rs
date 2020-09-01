@@ -1,21 +1,19 @@
-//! Magro config.
+//! Collections config.
 
-use std::path::Path;
+use std::{fs, io, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::collection::{CollectionName, Collections};
+use crate::{
+    collection::{CollectionName, Collections},
+    config::load::LoadError,
+};
 
-pub use self::{collection::CollectionsConfig, load::LoadError};
-
-mod collection;
-mod load;
-
-/// Magro config.
+/// Collections config.
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "kebab-case")]
-pub struct Config {
+pub struct CollectionsConfig {
     /// Default collection.
     ///
     /// Note that this could be non-existent collection name.
@@ -30,11 +28,27 @@ pub struct Config {
     collections: Collections,
 }
 
-impl Config {
+impl CollectionsConfig {
     /// Loads a config from a file at the given path.
     #[inline]
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
-        load::from_path(path.as_ref())
+    pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
+        let content = fs::read_to_string(path)?;
+        toml::from_str(&content).map_err(LoadError::from_decode)
+    }
+
+    /// Saves the config to the given path.
+    pub(crate) fn save_to_path(&self, path: &Path) -> io::Result<()> {
+        let content = {
+            let mut content = String::new();
+            let mut ser = toml::Serializer::new(&mut content);
+            ser.pretty_array(true);
+            // This is expected to always success, because the config is valid and
+            // the serialization itself does not perform I/O.
+            self.serialize(&mut ser)
+                .expect("Default config data should be serializable");
+            content
+        };
+        fs::write(path, &content)
     }
 
     /// Returns a reference to the collections.
