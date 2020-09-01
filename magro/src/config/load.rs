@@ -4,8 +4,6 @@ use std::{fs, io, path::Path};
 
 use thiserror::Error as ThisError;
 
-use crate::config::Config;
-
 /// Config load error.
 #[derive(Debug, ThisError)]
 #[error("{}: {}", kind.as_str(), source)]
@@ -62,13 +60,30 @@ impl LoadErrorKind {
     }
 }
 
-/// Loads a config from a file at the given path.
-pub(super) fn from_path(path: &Path) -> Result<Config, LoadError> {
+/// Loads a data from a file at the given path.
+pub(super) fn from_path<T>(path: &Path) -> Result<T, LoadError>
+where
+    for<'a> T: serde::Deserialize<'a>,
+{
     let content = fs::read_to_string(path)?;
-    from_toml_str(&content)
+    toml::from_str::<T>(&content).map_err(LoadError::from_decode)
 }
 
-/// Loads a config from the given toml string.
-fn from_toml_str(content: &str) -> Result<Config, LoadError> {
-    toml::from_str(content).map_err(LoadError::from_decode)
+/// Saves the given data to a file at the given path.
+pub(super) fn save_to_path<T>(value: T, path: &Path) -> io::Result<()>
+where
+    T: serde::Serialize,
+{
+    let content = {
+        let mut content = String::new();
+        let mut ser = toml::Serializer::new(&mut content);
+        ser.pretty_array(true);
+        // This is expected to always success, because the config is valid and
+        // the serialization itself does not perform I/O.
+        value
+            .serialize(&mut ser)
+            .expect("Valid data should be serializable");
+        content
+    };
+    fs::write(path, &content)
 }
