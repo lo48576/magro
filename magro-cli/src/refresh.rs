@@ -53,7 +53,7 @@ impl RefreshOpt {
             self.verbose
         );
 
-        let collections = context.config().collections();
+        let collections = context.collections_config().collections();
         let mut targets = self
             .collections
             .iter()

@@ -132,7 +132,7 @@ impl ListOpt {
             [] => None,
             vcs => Some(vcs.iter().flatten().collect()),
         };
-        let collections = context.config().collections();
+        let collections = context.collections_config().collections();
         let mut targets = self
             .collections
             .iter()
