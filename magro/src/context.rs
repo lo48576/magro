@@ -61,7 +61,7 @@ pub struct Context {
 impl Context {
     /// Creates a new context with default config path.
     #[inline]
-    pub fn new(config_path: Option<&Path>) -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let user_dirs = UserDirs::new()
             .context("Failed to get user directory")
             .map_err(Error::new)?;
@@ -70,8 +70,7 @@ impl Context {
         log::debug!("Config directory: {:?}", project_dirs.config_dir());
 
         let conf_dir = project_dirs.config_dir();
-        let config_path =
-            config_path.map_or_else(|| conf_dir.join(DEFAULT_CONFIG_RELPATH), ToOwned::to_owned);
+        let config_path = conf_dir.join(DEFAULT_CONFIG_RELPATH);
         let config = Config::from_path(&config_path)
             .with_context(|| anyhow!("Failed to load the config file {}", config_path.display()))
             .map_err(Error::new)?;
