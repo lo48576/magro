@@ -232,12 +232,7 @@ fn add_collection(
         .cache_collection_repos(name.clone(), coll_cache);
 
     // Save the cache.
-    context.save_cache().with_context(|| {
-        anyhow!(
-            "Failed to save cache file {}",
-            context.cache_path().display()
-        )
-    })?;
+    context.save_cache().context("Failed to save cache file")?;
 
     log::debug!("Added the collection `{}`", name);
 
@@ -278,12 +273,7 @@ fn unregister_collection(
         .context("Failed to save config")?;
 
     // Save the cache.
-    context.save_cache().with_context(|| {
-        anyhow!(
-            "Failed to save cache file {}",
-            context.cache_path().display()
-        )
-    })?;
+    context.save_cache().context("Failed to save cache file")?;
 
     Ok(())
 }
@@ -354,12 +344,7 @@ fn rename_collection(
     cache.cache_collection_repos(new_name.clone(), coll_cache);
 
     // Save the cache.
-    context.save_cache().with_context(|| {
-        anyhow!(
-            "Failed to save cache file {}",
-            context.cache_path().display()
-        )
-    })?;
+    context.save_cache().context("Failed to save cache file")?;
 
     Ok(())
 }
