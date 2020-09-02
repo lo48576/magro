@@ -12,7 +12,7 @@ use thiserror::Error as ThisError;
 
 use crate::{
     cache::Cache,
-    config::{CollectionsConfig, Config},
+    config::{CollectionsConfig, MainConfig},
 };
 
 /// Default config file path relative to the config directory.
@@ -60,8 +60,8 @@ pub struct Context {
     collections_config_path: PathBuf,
     /// Cache file path.
     cache_path: PathBuf,
-    /// Config.
-    config: Config,
+    /// Main config.
+    main_config: MainConfig,
     /// Collections config.
     collections_config: CollectionsConfig,
     /// Lazily loaded cache.
@@ -81,7 +81,7 @@ impl Context {
 
         let conf_dir = project_dirs.config_dir();
         let config_path = conf_dir.join(DEFAULT_CONFIG_RELPATH);
-        let config = Config::from_path(&config_path)
+        let main_config = MainConfig::from_path(&config_path)
             .with_context(|| anyhow!("Failed to load the config file {}", config_path.display()))
             .map_err(Error::new)?;
         log::debug!(
@@ -113,7 +113,7 @@ impl Context {
             collections_config_path,
             cache_path,
             project_dirs,
-            config,
+            main_config,
             collections_config,
             cache: OnceCell::new(),
         })
@@ -150,13 +150,13 @@ impl Context {
     /// Returns the config.
     #[inline]
     #[must_use]
-    pub fn config(&self) -> &Config {
-        &self.config
+    pub fn main_config(&self) -> &MainConfig {
+        &self.main_config
     }
 
     /// Saves the given config.
     #[inline]
-    pub fn save_config(&self, config: &Config) -> io::Result<()> {
+    pub fn save_config(&self, config: &MainConfig) -> io::Result<()> {
         save_config(&self.config_path, config)
     }
 
@@ -194,7 +194,7 @@ impl Context {
 }
 
 /// Saves a config to the given path.
-fn save_config(path: &Path, conf: &Config) -> io::Result<()> {
+fn save_config(path: &Path, conf: &MainConfig) -> io::Result<()> {
     use serde::Serialize;
 
     let content = {
@@ -238,7 +238,7 @@ pub fn create_default_config_file_if_missing() -> Result<PathBuf, Error> {
             .map_err(Error::new)?;
     }
 
-    let config = Config::default();
+    let config = MainConfig::default();
     save_config(&config_path, &config)
         .with_context(|| {
             anyhow!(
