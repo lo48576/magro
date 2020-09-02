@@ -1,6 +1,6 @@
 //! Magro config.
 
-use std::{io, path::Path};
+use std::{io, mem, path::Path};
 
 pub use self::{collection::CollectionsConfig, load::LoadError, main::MainConfig};
 use crate::collection::{CollectionName, Collections};
@@ -61,8 +61,8 @@ impl Config {
     }
 
     /// Saves the configs if possibly modified.
-    pub(super) fn save_if_dirty(&self, conf_dir: &Path) -> io::Result<()> {
-        if self.collections_is_dirty {
+    pub(super) fn save_if_dirty(&mut self, conf_dir: &Path) -> io::Result<()> {
+        if mem::replace(&mut self.collections_is_dirty, false) {
             self.collections.save_to_path(conf_dir)?;
         }
 

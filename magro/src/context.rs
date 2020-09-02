@@ -114,8 +114,8 @@ impl Context {
 
     /// Saves the config if (possibly) dirty.
     #[inline]
-    pub fn save_config_if_dirty(&self) -> io::Result<()> {
-        self.config().save_if_dirty(&self.config_dir)
+    pub fn save_config_if_dirty(&mut self) -> io::Result<()> {
+        self.config.save_if_dirty(&self.config_dir)
     }
 
     /// Loads the cache if necessary, and returns the cache.
