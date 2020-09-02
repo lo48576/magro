@@ -86,9 +86,12 @@ fn clone_repo(
 
     let bare = bare == OptionBool::Yes;
 
-    let reldest = match vcs {
+    let (reldest, relative_rawdir) = match vcs {
         Vcs::Git => {
-            git_dest_relpath(uri, bare).context("Failed to determine clone destination path")?
+            let reldest = git_dest_relpath(uri, bare)
+                .context("Failed to determine clone destination path")?;
+            let rawdir = reldest.join(".git");
+            (reldest, rawdir)
         }
         vcs => {
             // This should not happen because `magro-cli` implementation is
@@ -110,7 +113,7 @@ fn clone_repo(
         .get_or_load_cache_mut()
         .context("Failed to load cache file")?;
     if let Some(mut repos) = cache.remove_collection_repos_cache(&collection_name) {
-        let entry = RepoCacheEntry::new(vcs, reldest);
+        let entry = RepoCacheEntry::new(vcs, relative_rawdir);
         // Use `extend_one` once stabilized.
         // See <https://github.com/rust-lang/rust/issues/72631>.
         repos.extend(iter::once(entry));
