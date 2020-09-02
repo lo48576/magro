@@ -13,10 +13,9 @@ pub(crate) mod refresh;
 fn main() -> anyhow::Result<()> {
     init_logger();
 
-    magro::context::create_default_config_file_if_missing()?;
-    let ctx = magro::Context::new(None)?;
+    let mut ctx = magro::Context::new()?;
     let opt = Opt::from_args();
-    opt.run(&ctx)?;
+    opt.run(&mut ctx)?;
 
     Ok(())
 }

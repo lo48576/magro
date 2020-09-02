@@ -23,7 +23,7 @@ pub struct Opt {
 
 impl Opt {
     /// Runs the actual operation.
-    pub fn run(&self, context: &Context) -> anyhow::Result<()> {
+    pub fn run(&self, context: &mut Context) -> anyhow::Result<()> {
         match &self.subcommand {
             Subcommand::Clone(opt) => opt.run(context),
             Subcommand::Collection(opt) => opt.run(context),

@@ -1,65 +1,100 @@
 //! Magro config.
 
-use std::path::Path;
+use std::{io, mem, path::Path};
 
-use serde::{Deserialize, Serialize};
-
+pub use self::{collection::CollectionsConfig, load::LoadError, main::MainConfig};
 use crate::collection::{CollectionName, Collections};
 
-pub use self::load::LoadError;
-
+mod collection;
 mod load;
+mod main;
+
+/// Default config file path relative to the config directory.
+const DEFAULT_MAIN_CONFIG_RELPATH: &str = "config.toml";
+
+/// Default collections config file path relative to the config directory.
+const DEFAULT_COLLECTIONS_CONFIG_RELPATH: &str = "collections.toml";
 
 /// Magro config.
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone)]
 pub struct Config {
-    /// Default collection.
-    ///
-    /// Note that this could be non-existent collection name.
-    /// If so, it should be treated in the same way as `None` (absense).
-    // See <https://github.com/serde-rs/serde/issues/642> for the reason
-    // the validation is not performed on this.
-    default_collection: Option<CollectionName>,
+    /// Main config.
+    main: MainConfig,
     /// Collections.
-    #[serde(rename = "collection")]
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Collections::is_empty")]
-    collections: Collections,
+    collections: CollectionsConfig,
+    /// Whether the collections config is (possibly) modified.
+    collections_is_dirty: bool,
 }
 
 impl Config {
-    /// Loads a config from a file at the given path.
-    #[inline]
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, LoadError> {
-        load::from_path(path.as_ref())
+    /// Loads config from the given directory.
+    pub(super) fn from_dir_path(conf_dir: &Path) -> Result<Self, LoadError> {
+        let main = {
+            let path = conf_dir.join(DEFAULT_MAIN_CONFIG_RELPATH);
+            if path.is_file() {
+                let conf = MainConfig::from_path(&path).map_err(|e| e.and_path(path.clone()))?;
+                log::debug!("Loaded main config file {:?}", path);
+                conf
+            } else {
+                log::debug!("Main config not found. Using default data");
+                MainConfig::default()
+            }
+        };
+        let (collections, collections_is_dirty) = {
+            let path = conf_dir.join(DEFAULT_COLLECTIONS_CONFIG_RELPATH);
+            if path.is_file() {
+                let conf =
+                    CollectionsConfig::from_path(&path).map_err(|e| e.and_path(path.clone()))?;
+                log::debug!("Loaded collections config file {:?}", path);
+                (conf, false)
+            } else {
+                log::debug!("Collections config not found. Using default data");
+                (CollectionsConfig::default(), true)
+            }
+        };
+
+        Ok(Self {
+            main,
+            collections,
+            collections_is_dirty,
+        })
     }
 
-    /// Returns a reference to the collections.
-    #[inline]
-    #[must_use]
-    pub fn collections(&self) -> &Collections {
-        &self.collections
-    }
+    /// Saves the configs if possibly modified.
+    pub(super) fn save_if_dirty(&mut self, conf_dir: &Path) -> io::Result<()> {
+        if mem::replace(&mut self.collections_is_dirty, false) {
+            self.collections.save_to_path(conf_dir)?;
+        }
 
-    /// Returns a mutable reference to the collections.
-    #[inline]
-    #[must_use]
-    pub fn collections_mut(&mut self) -> &mut Collections {
-        &mut self.collections
+        Ok(())
     }
 
     /// Returns a default collection.
     #[inline]
     #[must_use]
     pub fn default_collection(&self) -> Option<&CollectionName> {
-        self.default_collection.as_ref()
+        self.collections.default_collection()
     }
 
     /// Sets default collection to the given name.
     #[inline]
     pub fn set_default_collection(&mut self, name: Option<CollectionName>) {
-        self.default_collection = name;
+        self.collections_is_dirty = true;
+        self.collections.set_default_collection(name);
+    }
+
+    /// Returns a reference to the collections.
+    #[inline]
+    #[must_use]
+    pub fn collections(&self) -> &Collections {
+        self.collections.collections()
+    }
+
+    /// Returns a mutable reference to the collections.
+    #[inline]
+    #[must_use]
+    pub fn collections_mut(&mut self) -> &mut Collections {
+        self.collections_is_dirty = true;
+        self.collections.collections_mut()
     }
 }

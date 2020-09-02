@@ -5,15 +5,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Context as _};
+use anyhow::Context as _;
 use directories::{ProjectDirs, UserDirs};
 use once_cell::sync::OnceCell;
 use thiserror::Error as ThisError;
 
-use crate::{cache::Cache, Config};
-
-/// Default config file path relative to the config directory.
-const DEFAULT_CONFIG_RELPATH: &str = "config.toml";
+use crate::{cache::Cache, config::Config};
 
 /// Default cache file path relative to the cache directory.
 const DEFAULT_CACHE_RELPATH: &str = "cache.toml";
@@ -48,12 +45,12 @@ pub struct Context {
     user_dirs: UserDirs,
     /// Project directories.
     project_dirs: ProjectDirs,
-    /// Config file path.
-    config_path: PathBuf,
-    /// Cache file path.
-    cache_path: PathBuf,
+    /// Config directory path.
+    config_dir: PathBuf,
     /// Config.
     config: Config,
+    /// Cache file path.
+    cache_path: PathBuf,
     /// Lazily loaded cache.
     cache: OnceCell<Cache>,
 }
@@ -61,7 +58,7 @@ pub struct Context {
 impl Context {
     /// Creates a new context with default config path.
     #[inline]
-    pub fn new(config_path: Option<&Path>) -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let user_dirs = UserDirs::new()
             .context("Failed to get user directory")
             .map_err(Error::new)?;
@@ -69,27 +66,20 @@ impl Context {
         let project_dirs = get_project_dirs().map_err(Error::new)?;
         log::debug!("Config directory: {:?}", project_dirs.config_dir());
 
-        let conf_dir = project_dirs.config_dir();
-        let config_path =
-            config_path.map_or_else(|| conf_dir.join(DEFAULT_CONFIG_RELPATH), ToOwned::to_owned);
-        let config = Config::from_path(&config_path)
-            .with_context(|| anyhow!("Failed to load the config file {}", config_path.display()))
+        let config_dir = project_dirs.config_dir().to_owned();
+        let config = Config::from_dir_path(&config_dir)
+            .context("Failed to load config")
             .map_err(Error::new)?;
-        log::debug!(
-            "Loaded config file {:?}",
-            AsRef::<Path>::as_ref(&config_path)
-        );
 
         let cache_dir = project_dirs.cache_dir();
-        // TODO: How to decide cache file path corresponding to config path?
         let cache_path = cache_dir.join(DEFAULT_CACHE_RELPATH);
 
         Ok(Self {
             user_dirs,
-            config_path,
+            config_dir,
+            config,
             cache_path,
             project_dirs,
-            config,
             cache: OnceCell::new(),
         })
     }
@@ -101,13 +91,6 @@ impl Context {
         self.user_dirs.home_dir()
     }
 
-    /// Returns the currently used config path.
-    #[inline]
-    #[must_use]
-    pub fn config_path(&self) -> &Path {
-        &self.config_path
-    }
-
     /// Returns the currently used cache file path.
     #[inline]
     #[must_use]
@@ -115,17 +98,24 @@ impl Context {
         &self.cache_path
     }
 
-    /// Returns the config.
+    /// Returns a reference to the config.
     #[inline]
     #[must_use]
     pub fn config(&self) -> &Config {
         &self.config
     }
 
-    /// Saves the given config.
+    /// Returns a mutable reference to the config.
     #[inline]
-    pub fn save_config(&self, config: &Config) -> io::Result<()> {
-        save_config(&self.config_path, config)
+    #[must_use]
+    pub fn config_mut(&mut self) -> &mut Config {
+        &mut self.config
+    }
+
+    /// Saves the config if (possibly) dirty.
+    #[inline]
+    pub fn save_config_if_dirty(&mut self) -> io::Result<()> {
+        self.config.save_if_dirty(&self.config_dir)
     }
 
     /// Loads the cache if necessary, and returns the cache.
@@ -146,65 +136,6 @@ impl Context {
     pub fn save_cache(&self, cache: &Cache) -> io::Result<()> {
         save_cache(&self.cache_path, cache)
     }
-}
-
-/// Saves a config to the given path.
-fn save_config(path: &Path, conf: &Config) -> io::Result<()> {
-    use serde::Serialize;
-
-    let content = {
-        let mut content = String::new();
-        let mut ser = toml::Serializer::new(&mut content);
-        ser.pretty_array(true);
-        // This is expected to always success, because the config is valid and
-        // the serialization does not perform I/O.
-        conf.serialize(&mut ser)
-            .expect("Default config data should be serializable");
-        content
-    };
-    fs::write(path, &content)
-}
-
-/// Creates a new default config file if not exist.
-pub fn create_default_config_file_if_missing() -> Result<PathBuf, Error> {
-    let project_dirs = get_project_dirs().map_err(Error::new)?;
-    let conf_dir = project_dirs.config_dir();
-
-    let config_path = conf_dir.join(DEFAULT_CONFIG_RELPATH);
-    log::trace!("Default config file path is {:?}", config_path);
-
-    if config_path.exists() {
-        // A file already exists. Do nothing.
-        // Note that it might not be a normal file: it can be a directory or
-        // something else.
-        log::trace!(
-            "File {:?} already exists. Not creating the default config",
-            config_path
-        );
-        return Ok(config_path);
-    }
-
-    if conf_dir.is_dir() {
-        log::trace!("Creating app config directory {:?}", conf_dir);
-        fs::DirBuilder::new()
-            .recursive(true)
-            .create(conf_dir)
-            .with_context(|| anyhow!("Failed to create directory {}", conf_dir.display()))
-            .map_err(Error::new)?;
-    }
-
-    let config = Config::default();
-    save_config(&config_path, &config)
-        .with_context(|| {
-            anyhow!(
-                "Failed to save the config file to {}",
-                config_path.display()
-            )
-        })
-        .map_err(Error::new)?;
-    log::debug!("Created default config file to {}", config_path.display());
-
-    Ok(config_path)
 }
 
 /// Saves a cache to the given path.
