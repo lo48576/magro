@@ -67,7 +67,7 @@ impl CollectionOpt {
                     names,
                     verbose
                 );
-                let collections = context.collections_config().collections();
+                let collections = context.config().collections();
                 if names.is_empty() {
                     show_collections(context, &mut collections.iter().map(Ok), *verbose)
                 } else {
@@ -175,12 +175,7 @@ pub enum Subcommand {
 /// Sets the default collection.
 fn set_default(context: &mut Context, name: Option<&CollectionName>) -> anyhow::Result<()> {
     if let Some(name) = name {
-        if context
-            .collections_config()
-            .collections()
-            .get(name)
-            .is_none()
-        {
+        if context.config().collections().get(name).is_none() {
             bail!("Collection named `{}` not found", name);
         }
     }
@@ -199,26 +194,28 @@ fn set_default(context: &mut Context, name: Option<&CollectionName>) -> anyhow::
 
 /// Adds the collection.
 fn add_collection(
-    context: &Context,
+    context: &mut Context,
     name: &CollectionName,
     path: &Path,
     refresh: bool,
 ) -> anyhow::Result<()> {
-    // Create a new modified config.
-    let mut newconf = context.collections_config().clone();
     let collection = Collection::new(name.clone(), path.to_owned());
-    let has_conflict = newconf.collections_mut().insert(collection).is_some();
+    let has_conflict = context
+        .config_mut()
+        .collections_mut()
+        .insert(collection)
+        .is_some();
     if has_conflict {
         bail!("Collection `{}` already exists", name);
     }
 
-    // Save the config.
     context
-        .save_collections_config(&newconf)
+        .save_config_if_dirty()
         .context("Failed to save config")?;
 
     // Create a new modified cache.
-    let collection = newconf
+    let collection = context
+        .config()
         .collections()
         .get(name)
         .expect("Should never fail: the collection was added just now");
@@ -252,12 +249,10 @@ fn add_collection(
 ///
 /// This operation is idempotent when `allow_remove_nothing` is `true`.
 fn unregister_collection(
-    context: &Context,
+    context: &mut Context,
     names: &[String],
     allow_remove_nothing: bool,
 ) -> anyhow::Result<()> {
-    // Create a new modified config.
-    let mut newconf = context.collections_config().clone();
     // Create a new modified cache.
     let mut newcache = context
         .get_or_load_cache()
@@ -265,7 +260,11 @@ fn unregister_collection(
         .clone();
 
     for name in names {
-        let is_removed = newconf.collections_mut().remove(name).is_some();
+        let is_removed = context
+            .config_mut()
+            .collections_mut()
+            .remove(name)
+            .is_some();
         if !is_removed {
             if allow_remove_nothing {
                 log::debug!("Collection named {:?} does not exist", name);
@@ -279,7 +278,7 @@ fn unregister_collection(
 
     // Save the config.
     context
-        .save_collections_config(&newconf)
+        .save_config_if_dirty()
         .context("Failed to save config")?;
 
     // Save the cache.
@@ -329,26 +328,24 @@ fn show_collections(
 
 /// Renames the collection.
 fn rename_collection(
-    context: &Context,
+    context: &mut Context,
     old_name: &CollectionName,
     new_name: &CollectionName,
 ) -> anyhow::Result<()> {
-    // Create a new modified config.
-    let mut newconf = context.collections_config().clone();
-    let mut collection = newconf
-        .collections_mut()
+    let collections = context.config_mut().collections_mut();
+    let mut collection = collections
         .remove(old_name)
         .ok_or_else(|| anyhow!("Collection named `{}` does not exist", old_name))?;
     collection.set_name(new_name.clone());
-    let has_conflict = newconf.collections_mut().insert(collection).is_some();
+    let has_conflict = collections.insert(collection).is_some();
     if has_conflict {
         bail!("Collection `{}` already exists", new_name);
     }
 
     // Save the config.
     context
-        .save_collections_config(&newconf)
-        .context("Failed to save config file {}")?;
+        .save_config_if_dirty()
+        .context("Failed to save config")?;
     log::debug!("Renamed the collection `{}` to `{}`", old_name, new_name);
 
     // Create a new modified cache.
@@ -375,7 +372,7 @@ fn rename_collection(
 /// Shows the path to the collection directory.
 fn get_path(context: &Context, name: &CollectionName) -> anyhow::Result<()> {
     let path = context
-        .collections_config()
+        .config()
         .collections()
         .get(name)
         .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name))?
@@ -386,10 +383,9 @@ fn get_path(context: &Context, name: &CollectionName) -> anyhow::Result<()> {
 }
 
 /// Sets the path to the collection directory.
-fn set_path(context: &Context, name: &CollectionName, path: &Path) -> anyhow::Result<()> {
-    // Create a new modified config.
-    let mut newconf = context.collections_config().clone();
-    newconf
+fn set_path(context: &mut Context, name: &CollectionName, path: &Path) -> anyhow::Result<()> {
+    context
+        .config_mut()
         .collections_mut()
         .get_mut(name)
         .ok_or_else(|| anyhow!("Collection named `{}` does not exist", name))?
@@ -397,7 +393,7 @@ fn set_path(context: &Context, name: &CollectionName, path: &Path) -> anyhow::Re
 
     // Save the config.
     context
-        .save_collections_config(&newconf)
+        .save_config_if_dirty()
         .context("Failed to save config")?;
     log::debug!("Set the path of the collection {:?} to {:?}", name, path);
 

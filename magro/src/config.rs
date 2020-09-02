@@ -3,7 +3,7 @@
 use std::{io, path::Path};
 
 pub use self::{collection::CollectionsConfig, load::LoadError, main::MainConfig};
-use crate::collection::CollectionName;
+use crate::collection::{CollectionName, Collections};
 
 mod collection;
 mod load;
@@ -69,33 +69,6 @@ impl Config {
         Ok(())
     }
 
-    /// Saves the collections config.
-    // TODO: This is temporary. Remove later.
-    pub(super) fn save_collections_config(
-        &self,
-        conf_dir: &Path,
-        conf: &CollectionsConfig,
-    ) -> io::Result<()> {
-        let newconf = Self {
-            main: self.main.clone(),
-            collections: conf.clone(),
-            collections_is_dirty: true,
-        };
-        newconf.save_if_dirty(conf_dir)
-    }
-
-    /// Returns the main config.
-    #[inline]
-    pub(super) fn main(&self) -> &MainConfig {
-        &self.main
-    }
-
-    /// Returns the collections config.
-    #[inline]
-    pub(super) fn collections(&self) -> &CollectionsConfig {
-        &self.collections
-    }
-
     /// Returns a default collection.
     #[inline]
     #[must_use]
@@ -108,5 +81,20 @@ impl Config {
     pub fn set_default_collection(&mut self, name: Option<CollectionName>) {
         self.collections_is_dirty = true;
         self.collections.set_default_collection(name);
+    }
+
+    /// Returns a reference to the collections.
+    #[inline]
+    #[must_use]
+    pub fn collections(&self) -> &Collections {
+        self.collections.collections()
+    }
+
+    /// Returns a mutable reference to the collections.
+    #[inline]
+    #[must_use]
+    pub fn collections_mut(&mut self) -> &mut Collections {
+        self.collections_is_dirty = true;
+        self.collections.collections_mut()
     }
 }

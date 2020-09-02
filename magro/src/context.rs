@@ -10,10 +10,7 @@ use directories::{ProjectDirs, UserDirs};
 use once_cell::sync::OnceCell;
 use thiserror::Error as ThisError;
 
-use crate::{
-    cache::Cache,
-    config::{CollectionsConfig, Config, MainConfig},
-};
+use crate::{cache::Cache, config::Config};
 
 /// Default cache file path relative to the cache directory.
 const DEFAULT_CACHE_RELPATH: &str = "cache.toml";
@@ -119,27 +116,6 @@ impl Context {
     #[inline]
     pub fn save_config_if_dirty(&self) -> io::Result<()> {
         self.config().save_if_dirty(&self.config_dir)
-    }
-
-    /// Returns the config.
-    #[inline]
-    #[must_use]
-    pub fn main_config(&self) -> &MainConfig {
-        self.config.main()
-    }
-
-    /// Returns the collections config.
-    #[inline]
-    #[must_use]
-    pub fn collections_config(&self) -> &CollectionsConfig {
-        &self.config.collections()
-    }
-
-    /// Saves the given collections config.
-    #[inline]
-    pub fn save_collections_config(&self, config: &CollectionsConfig) -> io::Result<()> {
-        self.config
-            .save_collections_config(&self.config_dir, config)
     }
 
     /// Loads the cache if necessary, and returns the cache.

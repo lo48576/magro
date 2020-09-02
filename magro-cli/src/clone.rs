@@ -65,13 +65,13 @@ fn clone_repo(
 ) -> anyhow::Result<()> {
     let collection = if let Some(name) = collection_name {
         context
-            .collections_config()
+            .config()
             .collections()
             .get(name)
             .with_context(|| format!("Collection `{}` not found", name))?
     } else if let Some(name) = context.config().default_collection() {
         context
-            .collections_config()
+            .config()
             .collections()
             .get(name)
             .with_context(|| format!("Default collection `{}` not found", name))?

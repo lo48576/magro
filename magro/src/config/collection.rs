@@ -43,14 +43,14 @@ impl CollectionsConfig {
     /// Returns a reference to the collections.
     #[inline]
     #[must_use]
-    pub fn collections(&self) -> &Collections {
+    pub(super) fn collections(&self) -> &Collections {
         &self.collections
     }
 
     /// Returns a mutable reference to the collections.
     #[inline]
     #[must_use]
-    pub fn collections_mut(&mut self) -> &mut Collections {
+    pub(super) fn collections_mut(&mut self) -> &mut Collections {
         &mut self.collections
     }
 
