@@ -13,9 +13,9 @@ pub(crate) mod refresh;
 fn main() -> anyhow::Result<()> {
     init_logger();
 
-    let ctx = magro::Context::new()?;
+    let mut ctx = magro::Context::new()?;
     let opt = Opt::from_args();
-    opt.run(&ctx)?;
+    opt.run(&mut ctx)?;
 
     Ok(())
 }

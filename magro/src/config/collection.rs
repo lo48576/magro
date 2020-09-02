@@ -57,13 +57,13 @@ impl CollectionsConfig {
     /// Returns a default collection.
     #[inline]
     #[must_use]
-    pub fn default_collection(&self) -> Option<&CollectionName> {
+    pub(super) fn default_collection(&self) -> Option<&CollectionName> {
         self.default_collection.as_ref()
     }
 
     /// Sets default collection to the given name.
     #[inline]
-    pub fn set_default_collection(&mut self, name: Option<CollectionName>) {
+    pub(super) fn set_default_collection(&mut self, name: Option<CollectionName>) {
         self.default_collection = name;
     }
 }

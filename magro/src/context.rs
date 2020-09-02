@@ -101,6 +101,26 @@ impl Context {
         &self.cache_path
     }
 
+    /// Returns a reference to the config.
+    #[inline]
+    #[must_use]
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    /// Returns a mutable reference to the config.
+    #[inline]
+    #[must_use]
+    pub fn config_mut(&mut self) -> &mut Config {
+        &mut self.config
+    }
+
+    /// Saves the config if (possibly) dirty.
+    #[inline]
+    pub fn save_config_if_dirty(&self) -> io::Result<()> {
+        self.config().save_if_dirty(&self.config_dir)
+    }
+
     /// Returns the config.
     #[inline]
     #[must_use]

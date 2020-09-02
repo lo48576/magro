@@ -25,7 +25,7 @@ pub struct CollectionOpt {
 
 impl CollectionOpt {
     /// Runs the actual operation.
-    pub fn run(&self, context: &Context) -> anyhow::Result<()> {
+    pub fn run(&self, context: &mut Context) -> anyhow::Result<()> {
         match &self.subcommand {
             Subcommand::SetDefault {
                 name,
@@ -173,19 +173,20 @@ pub enum Subcommand {
 }
 
 /// Sets the default collection.
-fn set_default(context: &Context, name: Option<&CollectionName>) -> anyhow::Result<()> {
-    // Create a new modified config.
-    let mut newconf = context.collections_config().clone();
+fn set_default(context: &mut Context, name: Option<&CollectionName>) -> anyhow::Result<()> {
     if let Some(name) = name {
-        if newconf.collections().get(name).is_none() {
+        if context
+            .collections_config()
+            .collections()
+            .get(name)
+            .is_none()
+        {
             bail!("Collection named `{}` not found", name);
         }
     }
-    newconf.set_default_collection(name.cloned());
-
-    // Save the config.
+    context.config_mut().set_default_collection(name.cloned());
     context
-        .save_collections_config(&newconf)
+        .save_config_if_dirty()
         .context("Failed to save config")?;
 
     match name {

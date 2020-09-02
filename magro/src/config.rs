@@ -3,6 +3,7 @@
 use std::{io, path::Path};
 
 pub use self::{collection::CollectionsConfig, load::LoadError, main::MainConfig};
+use crate::collection::CollectionName;
 
 mod collection;
 mod load;
@@ -93,5 +94,19 @@ impl Config {
     #[inline]
     pub(super) fn collections(&self) -> &CollectionsConfig {
         &self.collections
+    }
+
+    /// Returns a default collection.
+    #[inline]
+    #[must_use]
+    pub fn default_collection(&self) -> Option<&CollectionName> {
+        self.collections.default_collection()
+    }
+
+    /// Sets default collection to the given name.
+    #[inline]
+    pub fn set_default_collection(&mut self, name: Option<CollectionName>) {
+        self.collections_is_dirty = true;
+        self.collections.set_default_collection(name);
     }
 }

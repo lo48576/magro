@@ -69,7 +69,7 @@ fn clone_repo(
             .collections()
             .get(name)
             .with_context(|| format!("Collection `{}` not found", name))?
-    } else if let Some(name) = context.collections_config().default_collection() {
+    } else if let Some(name) = context.config().default_collection() {
         context
             .collections_config()
             .collections()
