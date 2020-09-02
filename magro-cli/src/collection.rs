@@ -213,16 +213,11 @@ fn add_collection(
         .save_config_if_dirty()
         .context("Failed to save config")?;
 
-    // Create a new modified cache.
     let collection = context
         .config()
         .collections()
         .get(name)
         .expect("Should never fail: the collection was added just now");
-    let mut newcache = context
-        .get_or_load_cache()
-        .context("Failed to load cache")?
-        .clone();
     let coll_cache = if refresh {
         generate_collection_repos_cache(context, collection, false, true)
             .expect("Should not be `Err(_)` when `keep_going` is `true`")
@@ -230,15 +225,14 @@ fn add_collection(
     } else {
         Default::default()
     };
-    newcache.cache_collection_repos(name.clone(), coll_cache);
+
+    context
+        .get_or_load_cache_mut()
+        .context("Failed to load cache")?
+        .cache_collection_repos(name.clone(), coll_cache);
 
     // Save the cache.
-    context.save_cache(&newcache).with_context(|| {
-        anyhow!(
-            "Failed to save cache file {}",
-            context.cache_path().display()
-        )
-    })?;
+    context.save_cache().context("Failed to save cache file")?;
 
     log::debug!("Added the collection `{}`", name);
 
@@ -253,12 +247,6 @@ fn unregister_collection(
     names: &[String],
     allow_remove_nothing: bool,
 ) -> anyhow::Result<()> {
-    // Create a new modified cache.
-    let mut newcache = context
-        .get_or_load_cache()
-        .context("Failed to load cache")?
-        .clone();
-
     for name in names {
         let is_removed = context
             .config_mut()
@@ -273,7 +261,10 @@ fn unregister_collection(
             }
         }
 
-        newcache.remove_collection_repos_cache(name);
+        context
+            .get_or_load_cache_mut()
+            .context("Failed to load cache")?
+            .remove_collection_repos_cache(name);
     }
 
     // Save the config.
@@ -282,12 +273,7 @@ fn unregister_collection(
         .context("Failed to save config")?;
 
     // Save the cache.
-    context.save_cache(&newcache).with_context(|| {
-        anyhow!(
-            "Failed to save cache file {}",
-            context.cache_path().display()
-        )
-    })?;
+    context.save_cache().context("Failed to save cache file")?;
 
     Ok(())
 }
@@ -348,23 +334,17 @@ fn rename_collection(
         .context("Failed to save config")?;
     log::debug!("Renamed the collection `{}` to `{}`", old_name, new_name);
 
-    // Create a new modified cache.
-    let mut newcache = context
-        .get_or_load_cache()
-        .context("Failed to load cache")?
-        .clone();
-    let coll_cache = newcache
+    // Update cache.
+    let cache = context
+        .get_or_load_cache_mut()
+        .context("Failed to load cache")?;
+    let coll_cache = cache
         .remove_collection_repos_cache(old_name)
         .unwrap_or_default();
-    newcache.cache_collection_repos(new_name.clone(), coll_cache);
+    cache.cache_collection_repos(new_name.clone(), coll_cache);
 
     // Save the cache.
-    context.save_cache(&newcache).with_context(|| {
-        anyhow!(
-            "Failed to save cache file {}",
-            context.cache_path().display()
-        )
-    })?;
+    context.save_cache().context("Failed to save cache file")?;
 
     Ok(())
 }

@@ -1,6 +1,7 @@
 //! Magro context.
 
 use std::{
+    borrow::Cow,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -91,13 +92,6 @@ impl Context {
         self.user_dirs.home_dir()
     }
 
-    /// Returns the currently used cache file path.
-    #[inline]
-    #[must_use]
-    pub fn cache_path(&self) -> &Path {
-        &self.cache_path
-    }
-
     /// Returns a reference to the config.
     #[inline]
     #[must_use]
@@ -121,8 +115,23 @@ impl Context {
     /// Loads the cache if necessary, and returns the cache.
     #[inline]
     pub fn get_or_load_cache(&self) -> io::Result<&Cache> {
-        let cache_path = self.cache_path();
-        self.cache.get_or_try_init(|| Cache::from_path(cache_path))
+        self.cache
+            .get_or_try_init(|| Cache::from_path(&self.cache_path))
+    }
+
+    /// Loads the cache if necessary, and returns the cache.
+    #[inline]
+    pub fn get_or_load_cache_mut(&mut self) -> io::Result<&mut Cache> {
+        match self
+            .cache
+            .get_or_try_init(|| Cache::from_path(&self.cache_path))
+        {
+            Ok(_) => Ok(self
+                .cache
+                .get_mut()
+                .expect("Should never happen because successfully initialized")),
+            Err(e) => Err(e),
+        }
     }
 
     /// Returns the cache if it is already loaded.
@@ -133,8 +142,11 @@ impl Context {
 
     /// Saves the given cache.
     #[inline]
-    pub fn save_cache(&self, cache: &Cache) -> io::Result<()> {
-        save_cache(&self.cache_path, cache)
+    pub fn save_cache(&self) -> io::Result<()> {
+        let cache = self
+            .get_or_load_cache()
+            .map_or_else(|_| Cow::Owned(Default::default()), Cow::Borrowed);
+        save_cache(&self.cache_path, &cache)
     }
 }
 

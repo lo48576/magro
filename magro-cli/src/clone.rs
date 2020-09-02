@@ -36,7 +36,7 @@ pub struct CloneOpt {
 
 impl CloneOpt {
     /// Runs the actual operation.
-    pub fn run(&self, context: &Context) -> anyhow::Result<()> {
+    pub fn run(&self, context: &mut Context) -> anyhow::Result<()> {
         log::trace!(
             "clone uri={:?}, collection={:?}, vcs={:?}, bare={}",
             self.uri,
@@ -57,7 +57,7 @@ impl CloneOpt {
 
 /// Clones the repository.
 fn clone_repo(
-    context: &Context,
+    context: &mut Context,
     uri: &str,
     collection_name: Option<&CollectionName>,
     vcs_opt: Option<Vcs>,
@@ -100,27 +100,25 @@ fn clone_repo(
 
     let absdest = collection.abspath(context).join(&reldest);
     log::debug!("Destination directory is {:?}", absdest);
+    let collection_name = collection.name().to_owned();
 
     vcs.clone(uri, &absdest, bare)
         .with_context(|| format!("Failed to clone repository {:?} into {:?}", uri, absdest))?;
 
     // Update cache.
-    let mut newcache = context
-        .get_or_load_cache()
-        .context("Failed to load cache file")?
-        .clone();
-    if let Some(mut repos) = newcache.remove_collection_repos_cache(collection.name()) {
+    let cache = context
+        .get_or_load_cache_mut()
+        .context("Failed to load cache file")?;
+    if let Some(mut repos) = cache.remove_collection_repos_cache(&collection_name) {
         let entry = RepoCacheEntry::new(vcs, reldest);
         // Use `extend_one` once stabilized.
         // See <https://github.com/rust-lang/rust/issues/72631>.
         repos.extend(iter::once(entry));
-        newcache.cache_collection_repos(collection.name().to_owned(), repos);
+        cache.cache_collection_repos(collection_name, repos);
     }
 
     // Save the cache file.
-    context
-        .save_cache(&newcache)
-        .context("Failed to save cache file")?;
+    context.save_cache().context("Failed to save cache file")?;
 
     Ok(())
 }

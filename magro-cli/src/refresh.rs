@@ -46,7 +46,7 @@ pub struct RefreshOpt {
 
 impl RefreshOpt {
     /// Runs the actual operation.
-    pub fn run(&self, context: &Context) -> anyhow::Result<()> {
+    pub fn run(&self, context: &mut Context) -> anyhow::Result<()> {
         log::trace!(
             "refresh collections={:?}, verbose={}",
             self.collections,
@@ -54,22 +54,42 @@ impl RefreshOpt {
         );
 
         let collections = context.config().collections();
-        let mut targets = self
+        let mut target_names = self
             .collections
             .iter()
             .flatten()
-            .map(|name| collections.get(name).ok_or(name))
+            .map(|name| {
+                let name = name.to_owned();
+                if collections.get(&name).is_some() {
+                    Ok(name)
+                } else {
+                    Err(name)
+                }
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
             .peekable();
 
-        if targets.peek().is_none() {
+        // `.collect::<Vec<_>>()` for `target_names` is necessary because the iterator
+        // before `collect()` borrows `collections`, which borrows `context`.
+        // Without the `collect()`, `context` cannot be passed as `&mut Context`.
+        //
+        // Clippy 0.0.212 (84b047b 2020-08-28, bundled with rustc 1.47.0-beta.2)
+        // emits false-positive `clippy::needless_collect` warning.
+        #[allow(clippy::needless_collect)]
+        if target_names.peek().is_none() {
+            let target_names = collections
+                .iter()
+                .map(|coll| coll.name().to_owned())
+                .collect::<Vec<_>>();
             refresh_collections(
                 context,
-                &mut collections.iter().map(Ok),
+                &mut target_names.into_iter().map(Ok),
                 self.verbose,
                 self.keep_going,
             )
         } else {
-            refresh_collections(context, &mut targets, self.verbose, self.keep_going)
+            refresh_collections(context, &mut target_names, self.verbose, self.keep_going)
         }
     }
 }
@@ -78,23 +98,25 @@ impl RefreshOpt {
 // Using `dyn Iterator` won't be problem, because the number of collections is
 // expected to be small (for usual usage).
 fn refresh_collections(
-    context: &Context,
-    collections: &mut dyn Iterator<Item = Result<&Collection, &CollectionName>>,
+    context: &mut Context,
+    target_collections: &mut dyn Iterator<Item = Result<CollectionName, CollectionName>>,
     verbose: bool,
     keep_going: bool,
 ) -> anyhow::Result<()> {
     use std::fmt::Write;
 
-    let mut cache = context
-        .get_or_load_cache()
-        .context("Failed to load cache file")?
-        .clone();
+    let mut error_collections: Vec<CollectionName> = Vec::new();
 
-    let mut error_collections: Vec<&CollectionName> = Vec::new();
-
-    for collection in collections {
-        let collection = match collection {
-            Ok(v) => v,
+    for collection in target_collections {
+        let (name, collection) = match collection {
+            Ok(name) => {
+                let collection = context
+                    .config()
+                    .collections()
+                    .get(&name)
+                    .expect("Only valid collection names can be passed as `Ok` value");
+                (name, collection)
+            }
             Err(name) => {
                 if keep_going {
                     log::error!("Collection named `{}` does not exist", name);
@@ -104,24 +126,25 @@ fn refresh_collections(
                 }
             }
         };
-        log::debug!("Refreshing collection `{}`", collection.name());
+        log::debug!("Refreshing collection `{}`", name);
 
         // `?` can be used here, because `generate_collection_repos_cache()`
         // could return `Err(_)` only when `keep_going` is false.
         let collection_cache: Option<_> =
             generate_collection_repos_cache(context, collection, verbose, keep_going)?;
         if collection_cache.is_none() {
-            error_collections.push(collection.name());
+            error_collections.push(name.clone());
         }
         let collection_cache = collection_cache.unwrap_or_default();
 
-        cache.cache_collection_repos(collection.name().clone(), collection_cache);
+        context
+            .get_or_load_cache_mut()
+            .context("Failed to load cache file")?
+            .cache_collection_repos(name, collection_cache);
     }
 
     // Save the cache file.
-    context
-        .save_cache(&cache)
-        .context("Failed to save cache file")?;
+    context.save_cache().context("Failed to save cache file")?;
 
     if !error_collections.is_empty() {
         assert!(keep_going);
