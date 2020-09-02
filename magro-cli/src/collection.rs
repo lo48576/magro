@@ -184,12 +184,9 @@ fn set_default(context: &Context, name: Option<&CollectionName>) -> anyhow::Resu
     newconf.set_default_collection(name.cloned());
 
     // Save the config.
-    context.save_collections_config(&newconf).with_context(|| {
-        anyhow!(
-            "Failed to save config file {}",
-            context.collections_config_path().display()
-        )
-    })?;
+    context
+        .save_collections_config(&newconf)
+        .context("Failed to save config")?;
 
     match name {
         Some(name) => log::trace!("Set default collection to `{}`", name),
@@ -215,12 +212,9 @@ fn add_collection(
     }
 
     // Save the config.
-    context.save_collections_config(&newconf).with_context(|| {
-        anyhow!(
-            "Failed to save config file {}",
-            context.collections_config_path().display()
-        )
-    })?;
+    context
+        .save_collections_config(&newconf)
+        .context("Failed to save config")?;
 
     // Create a new modified cache.
     let collection = newconf
@@ -283,12 +277,9 @@ fn unregister_collection(
     }
 
     // Save the config.
-    context.save_collections_config(&newconf).with_context(|| {
-        anyhow!(
-            "Failed to save config file {}",
-            context.collections_config_path().display()
-        )
-    })?;
+    context
+        .save_collections_config(&newconf)
+        .context("Failed to save config")?;
 
     // Save the cache.
     context.save_cache(&newcache).with_context(|| {
@@ -354,12 +345,9 @@ fn rename_collection(
     }
 
     // Save the config.
-    context.save_collections_config(&newconf).with_context(|| {
-        anyhow!(
-            "Failed to save config file {}",
-            context.collections_config_path().display()
-        )
-    })?;
+    context
+        .save_collections_config(&newconf)
+        .context("Failed to save config file {}")?;
     log::debug!("Renamed the collection `{}` to `{}`", old_name, new_name);
 
     // Create a new modified cache.
@@ -407,12 +395,9 @@ fn set_path(context: &Context, name: &CollectionName, path: &Path) -> anyhow::Re
         .set_path(path);
 
     // Save the config.
-    context.save_collections_config(&newconf).with_context(|| {
-        anyhow!(
-            "Failed to save config file {}",
-            context.collections_config_path().display()
-        )
-    })?;
+    context
+        .save_collections_config(&newconf)
+        .context("Failed to save config")?;
     log::debug!("Set the path of the collection {:?} to {:?}", name, path);
 
     Ok(())

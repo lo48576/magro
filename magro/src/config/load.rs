@@ -1,15 +1,20 @@
 //! Config load.
 
-use std::{fs, io, path::Path};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 use thiserror::Error as ThisError;
 
 /// Config load error.
 #[derive(Debug, ThisError)]
-#[error("{}: {}", kind.as_str(), source)]
+#[error("{} (at file {:?}): {}", kind.as_str(), path, source)]
 pub struct LoadError {
     /// Error kind.
     kind: LoadErrorKind,
+    /// Filename.
+    path: Option<PathBuf>,
     /// Error source.
     #[source]
     source: anyhow::Error,
@@ -21,7 +26,17 @@ impl LoadError {
     pub(super) fn from_decode(e: impl Into<anyhow::Error>) -> Self {
         Self {
             kind: LoadErrorKind::Decode,
+            path: None,
             source: e.into(),
+        }
+    }
+
+    /// Returns a new error with the given path.
+    #[inline]
+    pub(super) fn and_path(self, path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: Some(path.into()),
+            ..self
         }
     }
 }
@@ -31,6 +46,7 @@ impl From<io::Error> for LoadError {
     fn from(e: io::Error) -> Self {
         Self {
             kind: LoadErrorKind::Io,
+            path: None,
             source: e.into(),
         }
     }
