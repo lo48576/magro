@@ -70,6 +70,13 @@ impl RefreshOpt {
             .into_iter()
             .peekable();
 
+        // `.collect::<Vec<_>>()` for `target_names` is necessary because the iterator
+        // before `collect()` borrows `collections`, which borrows `context`.
+        // Without the `collect()`, `context` cannot be passed as `&mut Context`.
+        //
+        // Clippy 0.0.212 (84b047b 2020-08-28, bundled with rustc 1.47.0-beta.2)
+        // emits false-positive `clippy::needless_collect` warning.
+        #[allow(clippy::needless_collect)]
         if target_names.peek().is_none() {
             let target_names = collections
                 .iter()
