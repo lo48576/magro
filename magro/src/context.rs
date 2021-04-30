@@ -11,7 +11,7 @@ use directories::{ProjectDirs, UserDirs};
 use once_cell::sync::OnceCell;
 use thiserror::Error as ThisError;
 
-use crate::{cache::Cache, config::Config};
+use crate::{cache::Cache, config::Config, lock_fs};
 
 /// Default cache file path relative to the cache directory.
 const DEFAULT_CACHE_RELPATH: &str = "cache.toml";
@@ -178,5 +178,5 @@ fn save_cache(path: &Path, cache: &Cache) -> io::Result<()> {
         );
         fs::DirBuilder::new().recursive(true).create(cache_dir)?;
     }
-    fs::write(path, &content)
+    lock_fs::write(path, &content)
 }

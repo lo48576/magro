@@ -11,4 +11,5 @@ pub mod collection;
 pub mod config;
 pub mod context;
 pub mod discovery;
+mod lock_fs;
 pub mod vcs;

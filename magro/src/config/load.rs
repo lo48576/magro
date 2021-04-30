@@ -1,11 +1,13 @@
 //! Config load.
 
 use std::{
-    fs, io,
+    io,
     path::{Path, PathBuf},
 };
 
 use thiserror::Error as ThisError;
+
+use crate::lock_fs;
 
 /// Config load error.
 #[derive(Debug, ThisError)]
@@ -81,7 +83,7 @@ pub(super) fn from_path<T>(path: &Path) -> Result<T, LoadError>
 where
     for<'a> T: serde::Deserialize<'a>,
 {
-    let content = fs::read_to_string(path)?;
+    let content = lock_fs::read_to_string(path)?;
     toml::from_str::<T>(&content).map_err(LoadError::from_decode)
 }
 
@@ -101,5 +103,5 @@ where
             .expect("Valid data should be serializable");
         content
     };
-    fs::write(path, &content)
+    lock_fs::write(path, &content)
 }
