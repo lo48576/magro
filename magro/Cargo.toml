@@ -31,6 +31,7 @@ walkdir = "2.2.2"
 # See <https://github.com/alexcrichton/cc-rs/issues/440>
 # and <https://github.com/rust-lang/git2-rs/pull/608>.
 cc = "1.0.43"
+fd-lock = "2.0.0"
 
 [dev-dependencies]
 serde_test = "1.0.115"

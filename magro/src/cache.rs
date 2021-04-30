@@ -3,13 +3,13 @@
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet},
-    fs, io, iter,
+    io, iter,
     path::{Path, PathBuf},
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::{collection::CollectionName, discovery::RepoEntry, vcs::Vcs};
+use crate::{collection::CollectionName, discovery::RepoEntry, lock_fs, vcs::Vcs};
 
 /// Global cache data.
 ///
@@ -33,13 +33,14 @@ impl Cache {
     /// Monomorphized internal implementation of `from_path()`.
     #[inline]
     fn from_path_impl(path: &Path) -> io::Result<Self> {
-        let content = match fs::read_to_string(path) {
+        let mut file = match lock_fs::open(path) {
             Ok(v) => v,
             Err(e) => match e.kind() {
                 io::ErrorKind::NotFound => return Ok(Self::default()),
                 _ => return Err(e),
             },
         };
+        let content = lock_fs::read_to_string_from_lockable_file(path, &mut file)?;
         match toml::from_str(&content) {
             Ok(v) => Ok(v),
             Err(e) => {
