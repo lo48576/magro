@@ -160,12 +160,12 @@ impl Ord for RepoCacheEntryWrapper {
 /// A cache entry for a repository.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RepoCacheEntry {
+    /// VCS type.
+    vcs: Vcs,
     /// Path.
     ///
     /// For git, `.git` directory or `*.git` directory.
     path: PathBuf,
-    /// VCS type.
-    vcs: Vcs,
 }
 
 impl RepoCacheEntry {
