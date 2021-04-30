@@ -1,0 +1,41 @@
+[package]
+name = "magro"
+version = "0.0.1"
+authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = "MAnage Git RepOsitories"
+repository = "https://gitlab.com/lo48576/magro"
+keywords = ["git"]
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+anyhow = "1.0.32"
+directories = "3"
+git2 = "0.13"
+log = "0.4"
+once_cell = "1.4"
+serde = { version = "1.0.115", features = ["derive"] }
+thiserror = "1.0.20"
+toml = "0.5.6"
+walkdir = "2.2.2"
+
+# This is an indirect dependency of git2 crate.
+# This should be removed once git2-rs#608 is merged to upstream.
+# See <https://github.com/alexcrichton/cc-rs/issues/440>
+# and <https://github.com/rust-lang/git2-rs/pull/608>.
+cc = "1.0.43"
+fd-lock = "2.0.0"
+
+[dev-dependencies]
+serde_test = "1.0.115"
+
+[badges]
+maintenance = { status = "experimental" }
+gitlab = { repository = "lo48576/magro", branch = "master" }
