@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+* Fixed collections config save failure.
+
+### Added
 * A CLI option is added to specify clone destination.
     + Use `clone --collection <dir>` or `clone -d <dir>`.
 
