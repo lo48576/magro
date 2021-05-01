@@ -43,9 +43,10 @@ impl CollectionOpt {
                 name,
                 path,
                 refresh,
+                set_default,
             } => {
                 log::trace!("collection add name={:?} path={:?}", name, path);
-                add_collection(context, name, path, *refresh)
+                add_collection(context, name, path, *refresh, *set_default)
             }
             Subcommand::Del {
                 names,
@@ -124,6 +125,9 @@ pub enum Subcommand {
         /// same way as `refresh --collections={new_collection} --keep-going`.
         #[structopt(long)]
         refresh: bool,
+        /// Sets the newly created directory to the default collection.
+        #[structopt(long)]
+        set_default: bool,
     },
     /// Unregisters a new collection.
     ///
@@ -198,6 +202,7 @@ fn add_collection(
     name: &CollectionName,
     path: &Path,
     refresh: bool,
+    set_default: bool,
 ) -> anyhow::Result<()> {
     let collection = Collection::new(name.clone(), path.to_owned());
     let has_conflict = context
@@ -207,6 +212,13 @@ fn add_collection(
         .is_some();
     if has_conflict {
         bail!("Collection `{}` already exists", name);
+    }
+
+    if set_default {
+        context
+            .config_mut()
+            .set_default_collection(Some(name.clone()));
+        log::debug!("Set {} as a default collection", name);
     }
 
     context
