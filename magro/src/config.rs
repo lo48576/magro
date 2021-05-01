@@ -63,7 +63,8 @@ impl Config {
     /// Saves the configs if possibly modified.
     pub(super) fn save_if_dirty(&mut self, conf_dir: &Path) -> io::Result<()> {
         if mem::replace(&mut self.collections_is_dirty, false) {
-            self.collections.save_to_path(conf_dir)?;
+            let path = conf_dir.join(DEFAULT_COLLECTIONS_CONFIG_RELPATH);
+            self.collections.save_to_path(&path)?;
         }
 
         Ok(())
