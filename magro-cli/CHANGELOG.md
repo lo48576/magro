@@ -8,6 +8,8 @@
 ### Added
 * A CLI option is added to specify clone destination.
     + Use `clone --collection <dir>` or `clone -d <dir>`.
+* `--set-default` option is added to `collection add` subcommand.
+    + This sets the newly created collection to default.
 
 ## [0.0.1]
 
