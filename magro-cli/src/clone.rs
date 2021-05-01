@@ -1,6 +1,10 @@
 //! `clone` subcommand.
 
-use std::{borrow::Cow, iter, path::Path};
+use std::{
+    borrow::Cow,
+    iter,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Context as _};
 use magro::{cache::RepoCacheEntry, collection::CollectionName, vcs::Vcs, Context};
@@ -17,6 +21,9 @@ pub struct CloneOpt {
     /// Collection to put the cloned repository.
     #[structopt(long, short)]
     collection: Option<CollectionName>,
+    /// Relative path of the destination directory.
+    #[structopt(long, short, parse(from_os_str))]
+    destination: Option<PathBuf>,
     /// VCS to use.
     ///
     /// If not specified, the program attempt to detect VCS automatically.
@@ -38,9 +45,10 @@ impl CloneOpt {
     /// Runs the actual operation.
     pub fn run(&self, context: &mut Context) -> anyhow::Result<()> {
         log::trace!(
-            "clone uri={:?}, collection={:?}, vcs={:?}, bare={}",
+            "clone uri={:?}, collection={:?}, dest={:?}, vcs={:?}, bare={}",
             self.uri,
             self.collection,
+            self.destination,
             self.vcs,
             self.bare
         );
@@ -49,6 +57,7 @@ impl CloneOpt {
             context,
             &self.uri,
             self.collection.as_ref(),
+            self.destination.as_deref(),
             self.vcs,
             self.bare,
         )
@@ -60,6 +69,7 @@ fn clone_repo(
     context: &mut Context,
     uri: &str,
     collection_name: Option<&CollectionName>,
+    cliopt_dest: Option<&Path>,
     vcs_opt: Option<Vcs>,
     bare: OptionBool,
 ) -> anyhow::Result<()> {
@@ -86,10 +96,23 @@ fn clone_repo(
 
     let bare = bare == OptionBool::Yes;
 
+    let collection_base_dir = collection.abspath(context);
     let (reldest, relative_rawdir) = match vcs {
         Vcs::Git => {
-            let reldest = git_dest_relpath(uri, bare)
-                .context("Failed to determine clone destination path")?;
+            let reldest = match cliopt_dest {
+                Some(dest) if dest.is_relative() => Cow::Borrowed(dest),
+                Some(dest) => match dest.strip_prefix(&collection_base_dir) {
+                    Ok(reldest) => Cow::Borrowed(reldest),
+                    Err(_) => bail!(
+                        "destination path ({}) should be relative path \
+                        or inside collection directory ({}), but it was not",
+                        dest.display(),
+                        collection_base_dir.display()
+                    ),
+                },
+                None => git_dest_relpath(uri, bare)
+                    .context("Failed to determine clone destination path")?,
+            };
             let rawdir = reldest.join(".git");
             (reldest, rawdir)
         }
@@ -101,7 +124,7 @@ fn clone_repo(
     };
     assert!(reldest.is_relative());
 
-    let absdest = collection.abspath(context).join(&reldest);
+    let absdest = collection_base_dir.join(&reldest);
     log::debug!("Destination directory is {:?}", absdest);
     let collection_name = collection.name().to_owned();
 
