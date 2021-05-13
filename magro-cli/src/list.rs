@@ -106,6 +106,8 @@ pub struct ListOpt {
     #[structopt(long)]
     workdir: bool,
     /// Prints only repositories of specified VCS's.
+    ///
+    /// Currently, only `git` is supported.
     // Not using `-v` for this, as it can be confused with `--verbose`.
     #[structopt(long, parse(try_from_str), multiple = true)]
     vcs: Vec<VcsList>,
