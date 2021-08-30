@@ -237,7 +237,7 @@ fn list_repos(
                     PathBase::Home => try_relativize(&path_to_show, home_dir),
                 };
 
-                print_raw_path(&mut handle, &path_to_show)?;
+                print_raw_path(&mut handle, path_to_show)?;
                 handle.write_all(newline)?;
             }
         }
