@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Bump MSRV to 1.55.
+
 ## [0.0.2]
 
 ### Fixed
