@@ -1,12 +1,12 @@
 [package]
 name = "magro"
 version = "0.0.2"
-authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
+authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 description = "MAnage Git RepOsitories"
-repository = "https://gitlab.com/lo48576/magro"
+repository = "https://gitlab.com/nop_thread/magro"
 keywords = ["git"]
 publish = false
 
@@ -38,4 +38,4 @@ serde_test = "1.0.115"
 
 [badges]
 maintenance = { status = "experimental" }
-gitlab = { repository = "lo48576/magro", branch = "master" }
+gitlab = { repository = "nop_thread/magro", branch = "master" }
