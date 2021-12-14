@@ -13,6 +13,6 @@
 
 Initial release.
 
-[Unreleased]: <https://gitlab.com/lo48576/magro/-/compare/v0.0.2...develop>
-[0.0.2]: <https://gitlab.com/lo48576/magro/-/tags/v0.0.2>
-[0.0.1]: <https://gitlab.com/lo48576/magro/-/tags/v0.0.1>
+[Unreleased]: <https://gitlab.com/nop_thread/magro/-/compare/v0.0.2...develop>
+[0.0.2]: <https://gitlab.com/nop_thread/magro/-/tags/v0.0.2>
+[0.0.1]: <https://gitlab.com/nop_thread/magro/-/tags/v0.0.1>
