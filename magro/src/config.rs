@@ -19,6 +19,7 @@ const DEFAULT_COLLECTIONS_CONFIG_RELPATH: &str = "collections.toml";
 #[derive(Debug, Clone)]
 pub struct Config {
     /// Main config.
+    #[allow(dead_code)] // The type is currently empty.
     main: MainConfig,
     /// Collections.
     collections: CollectionsConfig,
