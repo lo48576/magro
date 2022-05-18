@@ -44,8 +44,6 @@ fn get_project_dirs() -> anyhow::Result<ProjectDirs> {
 pub struct Context {
     /// User directories.
     user_dirs: UserDirs,
-    /// Project directories.
-    project_dirs: ProjectDirs,
     /// Config directory path.
     config_dir: PathBuf,
     /// Config.
@@ -80,7 +78,6 @@ impl Context {
             config_dir,
             config,
             cache_path,
-            project_dirs,
             cache: OnceCell::new(),
         })
     }

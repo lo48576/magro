@@ -170,7 +170,7 @@ fn suppose_vcs_from_uri(uri: &str) -> Option<Vcs> {
                 let hostname_end = authority
                     .rfind(':')
                     .filter(|&v| v > hostname_start)
-                    .unwrap_or_else(|| authority.len());
+                    .unwrap_or(authority.len());
                 &authority[hostname_start..hostname_end]
             };
             log::trace!("Hostname of {:?} is {:?}", uri, hostname);
